@@ -21,7 +21,7 @@ var nodemailer = require("nodemailer");
 const dbServerIP = "localhost";
 const dbCollection = "users";
 var mongoose = require("mongoose/");
-var usersDB = mongoose.createConnection("mongodb://" + dbServerIP + "27017/" + dbCollection);
+var usersDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + dbCollection);
 var userSchema = new mongoose.Schema({
     username: String,
     password: String,
