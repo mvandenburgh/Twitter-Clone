@@ -58,7 +58,7 @@ function sendEmail(email, key) {
     //let website = "http://130.245.169.93";
     //let qstr = querystring.escape('email=' + email + '&key=' + key);
     var message = {
-        from: 'verify@wproj2.cloud.compas.cs.stonybrook.edu',
+        from: 'verify@mv.cloud.compas.cs.stonybrook.edu',
         to: email,
         subject: 'Confirm Email',
         //html: '<p>Click <a href="' + website + '/verify?' + qstr + '">this link</a> to verify your account or enter the following verification key on the website:<br>validation key: &lt' + key + '&gt</p>'
@@ -166,7 +166,7 @@ app.post("/verify", function (req, res) {
     else {
         User.findOne({ 'email': email }, function (err, user) {
             if (err) {
-                console.log("ERROR, USER NOT FOUND"); // TODO: implement this
+                console.log("ERROR, USER NOT FOUND");
                 res.json({ status: "ERROR", error: "user not found" });
             } else {
                 if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
