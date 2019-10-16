@@ -5,26 +5,8 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" type="text/css" href="/css/index.css">
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
-        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-    <script src="http://malsup.github.com/jquery.form.js"></script>
+    
 
-    <script>
-        // wait for the DOM to be loaded 
-        $(document).ready(function () {
-            $('#form').ajaxForm({
-                success: function (data) {
-                    $.ajax({
-                        url: "/verify",
-                        type: "GET",
-                        success: function(data) {
-                            alert(data);
-                        }
-                    });
-                }
-            });
-        }); 
-    </script>
 </head>
 
 <body>
@@ -63,5 +45,8 @@
         </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="http://malsup.github.com/jquery.form.js"></script>
     <script src="/js/signup.js"></script>
     <% include ../partials/footer %>
