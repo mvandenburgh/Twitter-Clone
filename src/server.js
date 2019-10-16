@@ -29,7 +29,7 @@ var userSchema = new mongoose.Schema({
     disable: Boolean,
     token: String
 });
-var User = userDB.model("User", userSchema);
+var User = usersDB.model("User", userSchema);
 
 /**
  * SETUP COOKIES/SESSIONS STUFF
