@@ -74,7 +74,13 @@ function sendEmail(email, key) {
 }
 
 app.get('/', (req, res) => {
+    var cookie = req.cookies.jwt;
+    if (typeof cookie == undefined) {
     res.render("index.ejs");
+    }
+    else {
+        res.redirect("/home");
+    }
 });
 
 app.get('/adduser', function (req, res) {
