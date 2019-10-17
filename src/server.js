@@ -27,7 +27,8 @@ var userSchema = new mongoose.Schema({
     password: String,
     email: String,
     disable: Boolean,
-    token: String
+    token: String,
+    tweets: Array
 });
 var User = usersDB.model("User", userSchema);
 
@@ -57,7 +58,7 @@ function sendEmail(email, key) {
     //let website = "http://mv.cse356.compas.cs.stonybrook.edu";
     //let website = "http://130.245.169.93";
     //let qstr = querystring.escape('email=' + email + '&key=' + key);
-    var message = {
+    let message = {
         from: 'verify@mv.cloud.compas.cs.stonybrook.edu',
         to: email,
         subject: 'Confirm Email',
@@ -73,8 +74,16 @@ function sendEmail(email, key) {
     });
 }
 
+
+class Tweet {
+    constructor(content, childType) {
+        this.content = content;
+        this.childType = childType;
+    }
+}
+
 app.get('/', (req, res) => {
-    var cookie = req.cookies.jwt;
+    let cookie = req.cookies.jwt;
     console.log(cookie);
     if (typeof cookie == undefined || !cookie) {
         res.render("index.ejs");
@@ -89,9 +98,9 @@ app.get('/adduser', (req, res) => {
 });
 
 app.post('/adduser', (req, res) => {
-    var email = req.body.email;
-    var username = req.body.username;
-    var password = crypto.createHash('sha256').update(req.body.password).digest('base64');
+    let email = req.body.email;
+    let username = req.body.username;
+    let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
     if (!User.findOne({ username: username })) { res.send("Username already taken") }
     else {
         let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
@@ -109,8 +118,8 @@ app.post('/adduser', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-    var username = req.body.username;
-    var password = crypto.createHash('sha256').update(req.body.password).digest('base64');
+    let username = req.body.username;
+    let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
     console.log("Attempting to login " + username);
     if (!username || !password) {
         console.log("u or p invalid");
@@ -150,7 +159,7 @@ app.post('/login', (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-    var cookie = req.cookies.jwt;
+    let cookie = req.cookies.jwt;
     console.log(cookie);
     if (typeof cookie == undefined) {
         res.json({ status: "ERROR" });
@@ -172,8 +181,8 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/verify", (req, res) => {
-    var email = req.body.email;
-    var key = req.body.key;
+    let email = req.body.email;
+    let key = req.body.key;
     if (!email || !key) res.json({ status: "ERROR", error: "invalid email and/or key" });
     else {
         User.findOne({ 'email': email }, (err, user) => {
@@ -198,6 +207,33 @@ app.post("/verify", (req, res) => {
         });
     }
 });
+
+app.post('/additem', (req, res) => {
+    let content = req.body.content;
+    let childType = req.body.childType;
+    let cookie = req.cookies.jwt;
+    if (typeof cookie === undefined || !cookie) {
+        res.json({ status: "ERROR", message: "invalid cookie" });
+        console.log("invalid cookie");
+    } else {
+        User.findOne({ 'token': cookie }, (err, user) => {
+            if (err) {
+                console.log("invalid logout request " + cookie);
+                res.json({ status: "ERROR", error: "invalid cookie" });
+            } else {
+                user.tweets.push(new Tweet(content, childType));
+                user.save((err, user) => {
+                    if (err) {
+                        console.log("Error: failed to post tweet from user " + user);
+                    } else {
+                        console.log(user + " posted tweet successfully.");
+                    }
+                });
+            }
+        });
+    }
+});
+
 
 app.get('/verify', (req, res) => {
     console.log("verify...");
@@ -226,7 +262,7 @@ app.get('/verify', (req, res) => {
 // });
 
 app.get('/home', (req, res) => {
-    var cookie = req.cookies.jwt;
+    let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
         res.json({ status: "ERROR", message: "invalid cookie" });
         console.log("invalid cookie");
