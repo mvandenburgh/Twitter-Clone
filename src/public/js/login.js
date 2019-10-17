@@ -23,22 +23,27 @@ console.log("IN login.js");
 
 $('#signInForm').submit((e) => {
     $.ajax({
-      url: $('#signInForm').attr('action'),
-      type: 'POST',
-      data : $('#signInForm').serialize(),
-      success: (response) => {
-        console.log('form submitted.');
-        console.log("the response is " + JSON.stringify(response));
-        $.ajax({
-            url: '/home',
-            type: 'GET',
-            success: (data) => {
-                $("#login").remove();
-                console.log("displaying home");
-                document.getElementById("home").innerHTML = data;
+        url: $('#signInForm').attr('action'),
+        type: 'POST',
+        data: $('#signInForm').serialize(),
+        success: (response) => {
+            console.log('form submitted.');
+            console.log("the response is " + JSON.stringify(response));
+            if (JSON.stringify(response).status === "OK") {
+                $.ajax({
+                    url: '/home',
+                    type: 'GET',
+                    success: (data) => {
+                        $("#login").remove();
+                        console.log("displaying home");
+                        document.getElementById("home").innerHTML = data;
+                    }
+                });
             }
-        });
-      }
+            else {
+                $("#error").innerHTML = "Incorrect username/password."
+            }
+        }
     });
     e.preventDefault();
 });
