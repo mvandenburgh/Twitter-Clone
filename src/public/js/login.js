@@ -29,7 +29,7 @@ $('#signInForm').submit((e) => {
         success: (response) => {
             console.log('form submitted.');
             console.log("the response is " + JSON.stringify(response));
-            if (JSON.stringify(response).status === "OK") {
+            if (response.status === "OK") {
                 $.ajax({
                     url: '/home',
                     type: 'GET',
@@ -41,6 +41,7 @@ $('#signInForm').submit((e) => {
                 });
             }
             else {
+                console.log("ERROR: INCORRECT U/P");
                 $("#error").innerHTML = "Incorrect username/password."
             }
         }
