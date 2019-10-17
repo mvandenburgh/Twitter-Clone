@@ -30,7 +30,7 @@ $('#signInForm').submit((e) => {
         console.log('form submitted.');
         console.log("the response is " + JSON.stringify(response));
         $.ajax({
-            url: '/login',
+            url: '/home',
             type: 'GET',
             success: (data) => {
                 $("#login").remove();

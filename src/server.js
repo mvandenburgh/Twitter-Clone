@@ -73,7 +73,7 @@ function sendEmail(email, key) {
     });
 }
 
-app.get('/', function (req, res) {
+app.get('/', (req, res) => {
     res.render("index.ejs");
 });
 
@@ -81,7 +81,7 @@ app.get('/adduser', function (req, res) {
     res.render("signup/signup.ejs");
 });
 
-app.post('/adduser', function (req, res) {
+app.post('/adduser', (req, res) => {
     var email = req.body.email;
     var username = req.body.username;
     var password = req.body.password;
@@ -101,7 +101,7 @@ app.post('/adduser', function (req, res) {
     }
 });
 
-app.post('/login', function (req, res) {
+app.post('/login', (req, res) => {
     var username = req.body.username;
     var password = req.body.password;
     console.log("Attempting to login " + username);
@@ -142,7 +142,7 @@ app.post('/login', function (req, res) {
     }
 });
 
-app.post("/logout", function (req, res) {
+app.post("/logout", (req, res) => {
     var cookie = req.cookies.jwt;
     if (typeof cookie == undefined) {
         res.json({ status: "ERROR" });
@@ -163,7 +163,7 @@ app.post("/logout", function (req, res) {
     }
 });
 
-app.post("/verify", function (req, res) {
+app.post("/verify", (req, res) => {
     var email = req.body.email;
     var key = req.body.key;
     if (!email || !key) res.json({ status: "ERROR", error: "invalid email and/or key" });
@@ -191,31 +191,49 @@ app.post("/verify", function (req, res) {
     }
 });
 
-app.get('/verify', function (req, res) {
+app.get('/verify', (req, res) => {
     console.log("verify...");
     res.render('signup/verify.ejs');
 });
 
-app.get('/login', (req, res) => {
+// app.get('/login', (req, res) => {
+//     var cookie = req.cookies.jwt;
+//     console.log(cookie);
+//     if (typeof cookie === undefined || !cookie) {
+//         res.json({ status: "ERROR", message: "invalid cookie" });
+//         console.log("invalid cookie");
+//     }
+//     else {
+//         User.findOne({ 'token': cookie }, function (err, user) {
+//             if (!user) {
+//                 res.json({ status: "ERROR", message: "invalid cookie" });
+//                 console.log(user);
+//                 console.log("invalid cookie");
+//             } else {
+//                 res.render('main/home.ejs', { username: user.username });
+//                 console.log("home render successful!");
+//             }
+//         });
+//     }
+// });
+
+app.get('/home', (req, res) => {
     var cookie = req.cookies.jwt;
-    console.log(cookie);
     if (typeof cookie === undefined || !cookie) {
         res.json({ status: "ERROR", message: "invalid cookie" });
         console.log("invalid cookie");
     }
     else {
-        User.findOne({ 'token': cookie }, function (err, user) {
-            if (!user) {
-                res.json({ status: "ERROR", message: "invalid cookie" });
-                console.log(user);
-                console.log("invalid cookie");
+        User.findOne({ 'token': cookie }, (err, user) => {
+            if (err) {
+                console.log(err);
+                res.json({status:"ERROR",error:"user not found"});
             } else {
-                res.render('main/home.ejs', { username: user.username });
-                console.log("home render successful!")
+                let username = user.username;
+                res.render("main/home.ejs", {username});
             }
-        });
+        });   
     }
-
 });
 
 
