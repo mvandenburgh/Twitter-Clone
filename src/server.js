@@ -84,7 +84,7 @@ app.get('/', (req, res) => {
     }
 });
 
-app.get('/adduser', function (req, res) {
+app.get('/adduser', (req, res) => {
     res.render("signup/signup.ejs");
 });
 
@@ -98,7 +98,7 @@ app.post('/adduser', (req, res) => {
         sendEmail(email, key);
         res.json({ status: "OK" });
         let user = new User({ username, password, email, disable: true });
-        user.save(function (err, user) {
+        user.save((err, user) => {
             if (err) {
                 console.log("Error: " + user + " couldn't be save to DB.");
             } else {
@@ -117,7 +117,7 @@ app.post('/login', (req, res) => {
         res.json({ status: "ERROR", error: "Username and/or password is invalid" });
     }
     else {
-        User.findOne({ 'username': username }, function (err, user) {
+        User.findOne({ 'username': username }, (err, user) => {
             if (err || !user) res.json({ status: "ERROR", error: "USER DOES NOT EXIST" });
             else {
                 if (user.password === password) {
@@ -129,7 +129,7 @@ app.post('/login', (req, res) => {
                                 expiresIn: '24h'
                             }
                         );
-                        User.update(user, { token: token }, function (err) {
+                        User.update(user, { token: token }, (err) => {
                             if (err) {
                                 console.log(user + " failed to generate cookie...");
                             } else {
@@ -156,7 +156,7 @@ app.post("/logout", (req, res) => {
         res.json({ status: "ERROR" });
     }
     else {
-        User.findOne({ 'token': cookie }, function (err, user) {
+        User.findOne({ 'token': cookie }, (err, user) => {
             if (err) {
                 console.log("invalid logout request " + cookie);
                 res.json({ status: "ERROR", error: "invalid cookie" });
@@ -176,13 +176,13 @@ app.post("/verify", (req, res) => {
     var key = req.body.key;
     if (!email || !key) res.json({ status: "ERROR", error: "invalid email and/or key" });
     else {
-        User.findOne({ 'email': email }, function (err, user) {
+        User.findOne({ 'email': email }, (err, user) => {
             if (err) {
                 console.log("ERROR, USER NOT FOUND");
                 res.json({ status: "ERROR", error: "user not found" });
             } else {
                 if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
-                    User.update(user, { disable: false }, function (err, affected) {
+                    User.update(user, { disable: false }, (err, affected) => {
                         if (err) {
                             console.log(user + " not verified....");
                             res.json({ status: "ERROR", error: "account verification failed" });
@@ -245,6 +245,6 @@ app.get('/home', (req, res) => {
 });
 
 
-app.listen(port, function () {
+app.listen(port, () => {
     console.log('Server started on port ' + port);
 });
