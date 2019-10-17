@@ -192,6 +192,24 @@ app.get('/verify', function (req, res) {
     res.render('signup/verify.ejs');
 });
 
+app.get('/login', (req, res) => {
+    var cookie = req.cookies.jwt;
+    console.log(cookie);
+    if (typeof cookie === undefined || !cookie) {
+        res.json({ status: "ERROR", message: "invalid cookie" });
+    }
+    else {
+        User.findOne({ 'token': cookie }, function (err, user) {
+            if (!user) {
+                res.json({ status: "ERROR", message: "invalid cookie" });
+                console.log(user);
+            } else {
+                res.render('main/home.ejs', {username: user.username});
+            }
+        });
+    }
+    
+});
 
 
 app.listen(port, function () {
