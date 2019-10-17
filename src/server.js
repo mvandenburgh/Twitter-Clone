@@ -91,7 +91,7 @@ app.get('/adduser', function (req, res) {
 app.post('/adduser', (req, res) => {
     var email = req.body.email;
     var username = req.body.username;
-    var password = req.body.password;
+    var password = crypto.createHash('sha256').update(req.body.password).digest('base64');
     if (!User.findOne({ username: username })) { res.send("Username already taken") }
     else {
         let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');

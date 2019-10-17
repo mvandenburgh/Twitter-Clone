@@ -1,7 +1,7 @@
 console.log("IN SIGNUP.JS");
 $('#form')
     .ajaxForm({
-        url: 'adduser', // or whatever
+        url: 'adduser',
         dataType: 'json',
         success: function (response) {
             $.ajax({
