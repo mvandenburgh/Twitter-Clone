@@ -256,14 +256,17 @@ app.get('/verify', (req, res) => {
 app.get('/home', (req, res) => {
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
+        res.clearCookie('jwt');
         res.json({ status: "ERROR", message: "invalid cookie" });
         console.log("invalid cookie");
     }
     else {
         User.findOne({ 'token': cookie }, (err, user) => {
-            if (err) {
+            if (err ||!user) {
                 console.log(err);
+                res.clearCookie('jwt');
                 res.json({ status: "ERROR", error: "user not found" });
+                
             } else {
                 let username = user.username;
                 res.render("main/home.ejs", { username });
