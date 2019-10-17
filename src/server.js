@@ -46,6 +46,11 @@ app.use(cookies());
  */
 var crypto = require('crypto');
 
+/**
+ * SETUP UNIQUE ID GENERATOR
+ */
+var uuid = require("uuid/v1");
+
 
 function sendEmail(email, key) {
     const transporter = nodemailer.createTransport({
@@ -76,9 +81,14 @@ function sendEmail(email, key) {
 
 
 class Tweet {
-    constructor(content, childType) {
+    constructor(content, childType, id, username) {
+        this.id = id;
+        this.username = username;
+        this.property = {likes: 0};
+        this.retweeted = 0;
         this.content = content;
         this.childType = childType;
+        this.timestamp = Date.now();
     }
 }
 
@@ -221,7 +231,8 @@ app.post('/additem', (req, res) => {
                 console.log("invalid logout request " + cookie);
                 res.json({ status: "ERROR", error: "invalid cookie" });
             } else {
-                user.tweets.push(new Tweet(content, childType));
+                let uniqueID = uuid.v1();
+                user.tweets.push(new Tweet(content, childType, uniqueID, user.username));
                 user.save((err, user) => {
                     if (err) {
                         console.log("Error: failed to post tweet from user " + user);
@@ -229,6 +240,7 @@ app.post('/additem', (req, res) => {
                         console.log(user + " posted tweet successfully.");
                     }
                 });
+                res.json( {status:"OK", id:"TODO add this"} );
             }
         });
     }
@@ -240,26 +252,6 @@ app.get('/verify', (req, res) => {
     res.render('signup/verify.ejs');
 });
 
-// app.get('/login', (req, res) => {
-//     var cookie = req.cookies.jwt;
-//     console.log(cookie);
-//     if (typeof cookie === undefined || !cookie) {
-//         res.json({ status: "ERROR", message: "invalid cookie" });
-//         console.log("invalid cookie");
-//     }
-//     else {
-//         User.findOne({ 'token': cookie }, function (err, user) {
-//             if (!user) {
-//                 res.json({ status: "ERROR", message: "invalid cookie" });
-//                 console.log(user);
-//                 console.log("invalid cookie");
-//             } else {
-//                 res.render('main/home.ejs', { username: user.username });
-//                 console.log("home render successful!");
-//             }
-//         });
-//     }
-// });
 
 app.get('/home', (req, res) => {
     let cookie = req.cookies.jwt;
