@@ -1,7 +1,7 @@
 console.log("IN login.js");
 $('#signInForm')
     .ajaxForm({
-        url: 'login',
+        url: '/login',
         method: "POST",
         dataType: 'json',
         success: function (response) {
