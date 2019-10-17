@@ -22,6 +22,7 @@ console.log("IN login.js");
 
 
 $('#signInForm').submit((e) => {
+    document.getElementById("error").innerHTML = "";
     $.ajax({
         url: $('#signInForm').attr('action'),
         type: 'POST',
