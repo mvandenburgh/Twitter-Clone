@@ -30,15 +30,7 @@ $('#signInForm').submit((e) => {
             console.log('form submitted.');
             console.log("the response is " + JSON.stringify(response));
             if (response.status === "OK") {
-                $.ajax({
-                    url: '/home',
-                    type: 'GET',
-                    success: (data) => {
-                        $("#login").remove();
-                        console.log("displaying home");
-                        document.getElementById("home").innerHTML = data;
-                    }
-                });
+                window.location.href("/home");
             }
             else {
                 console.log("ERROR: INCORRECT U/P");
