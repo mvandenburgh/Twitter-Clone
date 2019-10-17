@@ -30,11 +30,11 @@ $('#signInForm').submit((e) => {
             console.log('form submitted.');
             console.log("the response is " + JSON.stringify(response));
             if (response.status === "OK") {
-                window.location.href("/home");
+                window.location.href = "/home";
             }
             else {
                 console.log("ERROR: INCORRECT U/P");
-                $("#error").innerHTML = "Incorrect username/password."
+                document.getElementById("error").innerHTML = "Incorrect username/password."
             }
         }
     });

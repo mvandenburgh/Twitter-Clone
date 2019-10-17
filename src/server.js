@@ -75,8 +75,9 @@ function sendEmail(email, key) {
 
 app.get('/', (req, res) => {
     var cookie = req.cookies.jwt;
-    if (typeof cookie == undefined) {
-    res.render("index.ejs");
+    console.log(cookie);
+    if (typeof cookie == undefined || !cookie) {
+        res.render("index.ejs");
     }
     else {
         res.redirect("/home");
@@ -150,6 +151,7 @@ app.post('/login', (req, res) => {
 
 app.post("/logout", (req, res) => {
     var cookie = req.cookies.jwt;
+    console.log(cookie);
     if (typeof cookie == undefined) {
         res.json({ status: "ERROR" });
     }
@@ -233,12 +235,12 @@ app.get('/home', (req, res) => {
         User.findOne({ 'token': cookie }, (err, user) => {
             if (err) {
                 console.log(err);
-                res.json({status:"ERROR",error:"user not found"});
+                res.json({ status: "ERROR", error: "user not found" });
             } else {
                 let username = user.username;
-                res.render("main/home.ejs", {username});
+                res.render("main/home.ejs", { username });
             }
-        });   
+        });
     }
 });
 
