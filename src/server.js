@@ -110,7 +110,7 @@ app.post('/adduser', (req, res) => {
 
 app.post('/login', (req, res) => {
     var username = req.body.username;
-    var password = req.body.password;
+    var password = crypto.createHash('sha256').update(req.body.password).digest('base64');
     console.log("Attempting to login " + username);
     if (!username || !password) {
         console.log("u or p invalid");
