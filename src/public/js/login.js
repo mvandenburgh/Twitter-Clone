@@ -3,7 +3,8 @@ $('#signInForm')
     .ajaxForm({
         url: '/login',
         method: "POST",
-        dataType: 'json',
+        // dataType: 'json',
+        data: new FormData($(this)),
         success: function (response) {
             $.ajax({
                 url: '/login',

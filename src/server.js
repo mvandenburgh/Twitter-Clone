@@ -104,7 +104,11 @@ app.post('/adduser', function (req, res) {
 app.post('/login', function (req, res) {
     var username = req.body.username;
     var password = req.body.password;
-    if (!username || !password) res.json({ status: "ERROR", error: "Username and/or password is invalid" });
+    console.log("Attempting to login " + username);
+    if (!username || !password) {
+        console.log("u or p invalid");
+        res.json({ status: "ERROR", error: "Username and/or password is invalid" });
+    }
     else {
         User.findOne({ 'username': username }, function (err, user) {
             if (err || !user) res.json({ status: "ERROR", error: "USER DOES NOT EXIST" });
@@ -197,18 +201,21 @@ app.get('/login', (req, res) => {
     console.log(cookie);
     if (typeof cookie === undefined || !cookie) {
         res.json({ status: "ERROR", message: "invalid cookie" });
+        console.log("invalid cookie");
     }
     else {
         User.findOne({ 'token': cookie }, function (err, user) {
             if (!user) {
                 res.json({ status: "ERROR", message: "invalid cookie" });
                 console.log(user);
+                console.log("invalid cookie");
             } else {
-                res.render('main/home.ejs', {username: user.username});
+                res.render('main/home.ejs', { username: user.username });
+                console.log("home render successful!")
             }
         });
     }
-    
+
 });
 
 
