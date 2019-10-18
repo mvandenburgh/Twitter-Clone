@@ -251,7 +251,6 @@ app.post('/additem', (req, res) => {
                     timestamp: Date.now()
                 });
                 
-                user.tweets.push(new Tweet(content, childType, uniqueID, user.username));
                 tweet.save((err, tweet) => {
                     if (err) {
                         console.log("Error: failed to post tweet  " + tweet);
