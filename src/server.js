@@ -27,10 +27,20 @@ var userSchema = new mongoose.Schema({
     password: String,
     email: String,
     disable: Boolean,
-    token: String,
-    tweets: Array
+    token: String
 });
 var User = usersDB.model("User", userSchema);
+
+var tweetSchema = new mongoose.Schema({
+    id: String,
+    username: String,
+    property: Object,
+    retweeted: Number,
+    content: String,
+    childType: String,
+    timestamp: Number
+});
+var Tweet = usersDB.model("Tweet", tweetSchema);
 
 /**
  * SETUP COOKIES/SESSIONS STUFF
@@ -80,17 +90,17 @@ function sendEmail(email, key) {
 }
 
 
-class Tweet {
-    constructor(content, childType, id, username) {
-        this.id = id;
-        this.username = username;
-        this.property = {likes: 0};
-        this.retweeted = 0;
-        this.content = content;
-        this.childType = childType;
-        this.timestamp = Date.now();
-    }
-}
+// class Tweet {
+//     constructor(content, childType, id, username) {
+//         this.id = id;
+//         this.username = username;
+//         this.property = {likes: 0};
+//         this.retweeted = 0;
+//         this.content = content;
+//         this.childType = childType;
+//         this.timestamp = Date.now();
+//     }
+// }
 
 app.get('/', (req, res) => {
     let cookie = req.cookies.jwt;
@@ -232,15 +242,50 @@ app.post('/additem', (req, res) => {
                 res.json({ status: "ERROR", error: "invalid cookie" });
             } else {
                 let uniqueID = uuidv1();
+                let tweet = new Tweet({
+                    id: uniqueID, 
+                    username: user.username,
+                    property: {likes: 0},
+                    retweeted: 0,
+                    content,
+                    timestamp: Date.now()
+                });
+                
                 user.tweets.push(new Tweet(content, childType, uniqueID, user.username));
-                user.save((err, user) => {
+                tweet.save((err, tweet) => {
                     if (err) {
-                        console.log("Error: failed to post tweet from user " + user);
+                        console.log("Error: failed to post tweet  " + tweet);
                     } else {
-                        console.log(user + " posted tweet successfully.");
+                        console.log(tweet + " posted successfully.");
                     }
                 });
-                res.json( {status:"OK", id:"TODO add this"} );
+                res.json( {status:"OK", id:uniqueID} );
+            }
+        });
+    }
+});
+
+app.get('/item/:id', (req, res) => {
+    let id = req.params.id;
+    if (!id) {
+        res.json({status:"ERROR", error:"item not found"});
+    }
+    else {
+        Tweet.findOne({ 'id': id }, (err, tweet) => {
+            if (err || !tweet) {
+                res.json({status:"ERROR", error:"item not found"});
+            } else {
+                res.json({
+                    status: "OK",
+                    item: {
+                        id: tweet.id,
+                        username: tweet.username,
+                        property: tweet.property,
+                        retweeted: tweet.retweeted,
+                        content: tweet.content,
+                        timestamp: tweet.timestamp
+                    },
+                });
             }
         });
     }
