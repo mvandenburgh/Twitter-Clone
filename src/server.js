@@ -92,18 +92,6 @@ function sendEmail(email, key) {
 }
 
 
-// class Tweet {
-//     constructor(content, childType, id, username) {
-//         this.id = id;
-//         this.username = username;
-//         this.property = {likes: 0};
-//         this.retweeted = 0;
-//         this.content = content;
-//         this.childType = childType;
-//         this.timestamp = Date.now();
-//     }
-// }
-
 app.get('/', (req, res) => {
     let cookie = req.cookies.jwt;
     console.log(cookie);
@@ -245,14 +233,14 @@ app.post('/additem', (req, res) => {
             } else {
                 let uniqueID = uuidv1();
                 let tweet = new Tweet({
-                    id: uniqueID, 
+                    id: uniqueID,
                     username: user.username,
-                    property: {likes: 0},
+                    property: { likes: 0 },
                     retweeted: 0,
                     content,
                     timestamp: Date.now()
                 });
-                
+
                 tweet.save((err, tweet) => {
                     if (err) {
                         console.log("Error: failed to post tweet  " + tweet);
@@ -260,7 +248,7 @@ app.post('/additem', (req, res) => {
                         console.log(tweet + " posted successfully.");
                     }
                 });
-                res.json( {status:"OK", id:uniqueID} );
+                res.json({ status: "OK", id: uniqueID });
             }
         });
     }
@@ -269,12 +257,12 @@ app.post('/additem', (req, res) => {
 app.get('/item/:id', (req, res) => {
     let id = req.params.id;
     if (!id) {
-        res.json({status:"ERROR", error:"item not found"});
+        res.json({ status: "ERROR", error: "item not found" });
     }
     else {
         Tweet.findOne({ 'id': id }, (err, tweet) => {
             if (err || !tweet) {
-                res.json({status:"ERROR", error:"item not found"});
+                res.json({ status: "ERROR", error: "item not found" });
             } else {
                 res.json({
                     status: "OK",
@@ -290,6 +278,15 @@ app.get('/item/:id', (req, res) => {
             }
         });
     }
+});
+
+app.post('/search/', (req, res) => {
+    let timestamp = req.body.timestamp;
+    if (!timestamp) timestamp = Date.now();
+    let limit = req.body.limit;
+    if (!limit) limit = 25;
+    if (limit > 100) limit = 100;
+
 });
 
 
@@ -308,11 +305,11 @@ app.get('/home', (req, res) => {
     }
     else {
         User.findOne({ 'token': cookie }, (err, user) => {
-            if (err ||!user) {
+            if (err || !user) {
                 console.log(err);
                 res.clearCookie('jwt');
                 res.json({ status: "ERROR", error: "user not found" });
-                
+
             } else {
                 let username = user.username;
                 res.render("main/home.ejs", { username });
