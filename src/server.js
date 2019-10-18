@@ -22,6 +22,8 @@ const dbServerIP = "localhost";
 const dbCollection = "users";
 var mongoose = require("mongoose/");
 var usersDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + dbCollection);
+var tweetsDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + "tweets");
+
 var userSchema = new mongoose.Schema({
     username: String,
     password: String,
@@ -40,7 +42,7 @@ var tweetSchema = new mongoose.Schema({
     childType: String,
     timestamp: Number
 });
-var Tweet = usersDB.model("Tweet", tweetSchema);
+var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
 /**
  * SETUP COOKIES/SESSIONS STUFF
