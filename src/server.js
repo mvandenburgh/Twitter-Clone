@@ -280,13 +280,24 @@ app.get('/item/:id', (req, res) => {
     }
 });
 
-app.post('/search/', (req, res) => {
-    let timestamp = req.body.timestamp;
+app.post('/search', (req, res) => {
+    let timestamp = Number(req.body.timestamp);
     if (!timestamp) timestamp = Date.now();
-    let limit = req.body.limit;
+    let limit = Number(req.body.limit);
     if (!limit) limit = 25;
     if (limit > 100) limit = 100;
-
+    let items = [];
+    Tweet.find({ timestamp: { $lt: timestamp } }).limit(limit).then((tweets) => {
+        tweets.forEach((tweet) => {
+            items.push(tweet);
+            console.log(tweet);
+        });
+        res.json({
+            status: "OK",
+            items: items
+        });
+    });
+    
 });
 
 
