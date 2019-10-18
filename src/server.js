@@ -49,7 +49,7 @@ var crypto = require('crypto');
 /**
  * SETUP UNIQUE ID GENERATOR
  */
-var uuid = require("uuid/v1");
+var uuidv1 = require("uuid/v1");
 
 
 function sendEmail(email, key) {
