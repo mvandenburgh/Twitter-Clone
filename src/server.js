@@ -231,7 +231,7 @@ app.post('/additem', (req, res) => {
                 console.log("invalid logout request " + cookie);
                 res.json({ status: "ERROR", error: "invalid cookie" });
             } else {
-                let uniqueID = uuid.v1();
+                let uniqueID = uuidv1();
                 user.tweets.push(new Tweet(content, childType, uniqueID, user.username));
                 user.save((err, user) => {
                     if (err) {
