@@ -311,8 +311,9 @@ app.get('/home', (req, res) => {
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
         res.clearCookie('jwt');
-        res.json({ status: "ERROR", message: "invalid cookie" });
-        console.log("invalid cookie");
+        // res.json({ status: "ERROR", message: "invalid cookie" });
+        // console.log("invalid cookie");
+        res.redirect("/");
     }
     else {
         User.findOne({ 'token': cookie }, (err, user) => {
