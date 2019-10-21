@@ -317,6 +317,7 @@ app.post('/search', (req, res) => {
 app.post('/reset', (req, res) => {
     User.deleteMany({});
     Tweet.deleteMany({});
+    res.json({status:"OK"});
 });
 
 app.get('/verify', (req, res) => {
