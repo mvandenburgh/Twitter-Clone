@@ -13,7 +13,11 @@
                     <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Features</a>
+                    <!-- <a class="nav-link" href="#">Features</a> -->
+                    <form id="searchBar" method="POST" action="/search">
+                        <input type="text" name="id" placeholder="id">
+                        <button type="submit">Search</button>
+                    </form>
                 </li>
                 <li class="nav-item">
                     <!-- <a class="nav-link" id="logoutbtn" href="#">Logout</a> -->
@@ -26,9 +30,12 @@
         </div>
     </nav>
     <%= username %>'s home page
-    <ul id="posts">
+    <ul id="posts"></ul>
 
-    </ul>
+    <form id="postTweet" method="POST" action="/additem">
+        <input type="text" name="content" placeholder="tweet">
+        <button type="submit">Post Tweet</button>
+    </form>
 
 
 </div>
