@@ -75,12 +75,15 @@ function sendEmail(email, key) {
     //let website = "http://mv.cse356.compas.cs.stonybrook.edu";
     //let website = "http://130.245.169.93";
     //let qstr = querystring.escape('email=' + email + '&key=' + key);
+    key = "<" + key + ">";
+    console.log("Sending message with key " + key);
     let message = {
         from: 'verify@mv.cloud.compas.cs.stonybrook.edu',
         to: email,
         subject: 'Confirm Email',
         //html: '<p>Click <a href="' + website + '/verify?' + qstr + '">this link</a> to verify your account or enter the following verification key on the website:<br>validation key: &lt' + key + '&gt</p>'
-        html: 'Enter the following verification key on the website:<br>validation key: &lt' + key + '&gt</p>'
+        text: "validation key: " + key,
+        // html: 'validation key: ' + key
     };
 
     transporter.sendMail(message, (error, info) => {
