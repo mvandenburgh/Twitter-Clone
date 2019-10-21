@@ -133,14 +133,14 @@ app.post('/login', (req, res) => {
     console.log("Attempting to login " + username);
     if (!username || !password) {
         console.log("u or p invalid");
-        res.json({ status: "ERROR", error: "Username and/or password is invalid" });
+        res.json({ status: "error", error: "Username and/or password is invalid" });
     }
     else {
         User.findOne({ 'username': username }, (err, user) => {
-            if (err || !user) res.json({ status: "ERROR", error: "USER DOES NOT EXIST" });
+            if (err || !user) res.json({ status: "error", error: "USER DOES NOT EXIST" });
             else {
                 if (user.password === password) {
-                    if (user.disable) res.json({ status: "ERROR", error: "user not verified" });
+                    if (user.disable) res.json({ status: "error", error: "user not verified" });
                     else {
                         let token = jwt.sign({ username: username },
                             config.secret,
@@ -161,7 +161,7 @@ app.post('/login', (req, res) => {
                 } else {
                     console.log(user.password);
                     console.log(password);
-                    res.json({ status: "ERROR", error: "Incorrect password" });
+                    res.json({ status: "error", error: "Incorrect password" });
                 }
             }
         });
@@ -172,13 +172,13 @@ app.post("/logout", (req, res) => {
     let cookie = req.cookies.jwt;
     console.log(cookie);
     if (typeof cookie == undefined) {
-        res.json({ status: "ERROR" });
+        res.json({ status: "error" });
     }
     else {
         User.findOne({ 'token': cookie }, (err, user) => {
             if (err) {
                 console.log("invalid logout request " + cookie);
-                res.json({ status: "ERROR", error: "invalid cookie" });
+                res.json({ status: "error", error: "invalid cookie" });
             } else {
                 user.token = undefined;
                 user.save();
@@ -193,25 +193,25 @@ app.post("/logout", (req, res) => {
 app.post("/verify", (req, res) => {
     let email = req.body.email;
     let key = req.body.key;
-    if (!email || !key) res.json({ status: "ERROR", error: "invalid email and/or key" });
+    if (!email || !key) res.json({ status: "error", error: "invalid email and/or key" });
     else {
         User.findOne({ 'email': email }, (err, user) => {
             if (err) {
                 console.log("ERROR, USER NOT FOUND");
-                res.json({ status: "ERROR", error: "user not found" });
+                res.json({ status: "error", error: "user not found" });
             } else {
                 if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
                     User.update(user, { disable: false }, (err, affected) => {
                         if (err) {
                             console.log(user + " not verified....");
-                            res.json({ status: "ERROR", error: "account verification failed" });
+                            res.json({ status: "error", error: "account verification failed" });
                         } else {
                             console.log(user + " account has been verified");
                             res.json({ status: "OK" });
                         }
                     });
                 } else {
-                    res.json({ status: "ERROR" });
+                    res.json({ status: "error" });
                 }
             }
         });
@@ -223,13 +223,13 @@ app.post('/additem', (req, res) => {
     let childType = req.body.childType;
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
-        res.json({ status: "ERROR", message: "invalid cookie" });
+        res.json({ status: "error", message: "invalid cookie" });
         console.log("invalid cookie");
     } else {
         User.findOne({ 'token': cookie }, (err, user) => {
             if (err) {
                 console.log("invalid logout request " + cookie);
-                res.json({ status: "ERROR", error: "invalid cookie" });
+                res.json({ status: "error", error: "invalid cookie" });
             } else {
                 let uniqueID = uuidv1();
                 let tweet = new Tweet({
@@ -257,12 +257,12 @@ app.post('/additem', (req, res) => {
 app.get('/item/:id', (req, res) => {
     let id = req.params.id;
     if (!id) {
-        res.json({ status: "ERROR", error: "item not found" });
+        res.json({ status: "error", error: "item not found" });
     }
     else {
         Tweet.findOne({ 'id': id }, (err, tweet) => {
             if (err || !tweet) {
-                res.json({ status: "ERROR", error: "item not found" });
+                res.json({ status: "error", error: "item not found" });
             } else {
                 res.json({
                     status: "OK",
@@ -320,7 +320,7 @@ app.get('/home', (req, res) => {
             if (err || !user) {
                 console.log(err);
                 res.clearCookie('jwt');
-                res.json({ status: "ERROR", error: "user not found" });
+                res.json({ status: "error", error: "user not found" });
 
             } else {
                 let username = user.username;
