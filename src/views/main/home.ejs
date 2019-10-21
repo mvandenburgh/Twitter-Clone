@@ -16,7 +16,8 @@
                     <a class="nav-link" href="#">Features</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" id="logoutbtn" href="#">Logout</a>
+                    <!-- <a class="nav-link" id="logoutbtn" href="#">Logout</a> -->
+                    <button id="logoutBtn" type="button" class="btn btn-primary">LOG OUT</button>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link disabled" href="#">Disabled</a>
@@ -25,7 +26,10 @@
         </div>
     </nav>
     <%= username %>'s home page
-    <button id="logoutBtn" type="button" class="btn btn-primary">LOG OUT</button>
+    <ul id="posts">
+
+    </ul>
+
 
 </div>
 
@@ -43,6 +47,24 @@
                 window.location.href = "/";
             }
         });
+    });
+
+    $.ajax({
+        url: "/search",
+        type: "POST",
+        success: (response) => {
+            console.log("Populating page with posts...");
+            let arr = response.items;
+            let posts = document.getElementById("posts");
+            for (let i = 0; i < arr.length; i++) {
+                let li = document.createElement("li");
+                li.appendChild(document.createTextNode(arr[i].content + " Author: " + arr[i].username));
+                li.setAttribute("id", "tweet" + i);
+                li.setAttribute("class", "tweet");
+                li.style.border = "1px solid black";
+                posts.appendChild(li);
+            }
+        }
     });
 
 </script>
