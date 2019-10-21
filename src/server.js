@@ -246,7 +246,7 @@ app.post('/additem', (req, res) => {
                     property: { likes: 0 },
                     retweeted: 0,
                     content: content,
-                    timestamp: Date.now()
+                    timestamp: Date.now() / 1000
                 });
 
                 tweet.save((err, tweet) => {
@@ -292,26 +292,32 @@ app.get('/item/:id', (req, res) => {
 
 app.post('/search', (req, res) => {
     let timestamp = Number(req.body.timestamp);
-    if (!timestamp) timestamp = Date.now();
     let limit = Number(req.body.limit);
+    if (!timestamp) timestamp = Date.now();
     if (!limit) limit = 25;
-    if (limit > 100) limit = 100;
-    let items = [];
-    console.log("searching for posts made before " + timestamp + " (limit:" + limit +")...");
-    Tweet.find({ timestamp: { $lt: timestamp } }).limit(limit).then((tweets) => {
-        tweets.forEach((tweet) => {
-            items.push(tweet);
-            console.log(tweet);
+    if (limit > 100) {
+        res.json({ status: "error", error: "invalid limit" + limit + ", limit must be > 100" });
+    } else {
+        let items = [];
+        console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
+        Tweet.find({ timestamp: { $lt: timestamp } }).limit(limit).then((tweets) => {
+            tweets.forEach((tweet) => {
+                items.push(tweet);
+                console.log(tweet);
+            });
+            console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
+            res.json({
+                status: "OK",
+                items: items
+            });
         });
-        console.log("RESPONSE: {status: 'OK', items: " + items +"\n}");
-        res.json({
-            status: "OK",
-            items: items
-        });
-    });
-
+    }
 });
 
+app.post('/reset', (req, res) => {
+    User.deleteMany({});
+    Tweet.deleteMany({});
+});
 
 app.get('/verify', (req, res) => {
     console.log("verify...");
