@@ -2,7 +2,7 @@
 
 <div id="root">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="#">Navbar</a>
+        <!-- <a class="navbar-brand" href="#">Navbar</a> -->
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -12,31 +12,53 @@
                 <li class="nav-item active">
                     <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
                 </li>
-                <li class="nav-item">
-                    <!-- <a class="nav-link" href="#">Features</a> -->
-                    <form id="searchBar" method="POST" action="/search">
-                        <input type="text" name="id" placeholder="id">
-                        <button type="submit">Search</button>
-                    </form>
-                </li>
-                <li class="nav-item">
-                    <!-- <a class="nav-link" id="logoutbtn" href="#">Logout</a> -->
-                    <button id="logoutBtn" type="button" class="btn btn-primary">LOG OUT</button>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link disabled" href="#">Disabled</a>
                 </li>
             </ul>
+            <div class="navbar-collapse collapse w-100 order-3 dual-collapse2">
+                <ul class="navbar-nav ml-auto">
+
+                    <li class="nav-item">
+                        <!-- <a class="nav-link" href="#">Features</a> -->
+                        <form id="searchBar" method="POST" action="/search">
+                            <input type="text" name="id" placeholder="id">
+                            <button type="submit">Search</button>
+                        </form>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">&nbsp &nbsp &nbsp &nbsp</a>
+                    </li>
+                    <li class="nav-item">
+                        <!-- <a class="nav-link" id="logoutbtn" href="#">Logout</a> -->
+                        <button id="logoutBtn" type="button" class="btn btn-primary">LOG OUT</button>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
-    <%= username %>'s home page
-    <ul id="posts"></ul>
+    <div id="welcome" style="font-size: 2em;">
+        <%= username %>'s home page
+    </div>
 
     <form id="postTweet" method="POST" action="/additem">
         <input type="text" name="content" placeholder="tweet">
         <button type="submit">Post Tweet</button>
     </form>
 
+    <form id="searchBarId" method="GET" action="/id">
+        <input type="text" name="id" placeholder="id">
+        <button type="submit">Search by id</button>
+    </form>
+
+    <form id="searchBar1" method="POST" action="/search">
+        <input type="text" name="timestamp" placeholder="timestamp">
+        <input type="text" name="limit" placeholder="limit">
+        <button type="submit">Search by timestamp and/or limit</button>
+    </form>
+
+    <ul id="posts"></ul>
 
 </div>
 
@@ -56,23 +78,92 @@
         });
     });
 
-    $.ajax({
-        url: "/search",
-        type: "POST",
-        success: (response) => {
-            console.log("Populating page with posts...");
-            let arr = response.items;
-            let posts = document.getElementById("posts");
-            for (let i = 0; i < arr.length; i++) {
-                let li = document.createElement("li");
-                li.appendChild(document.createTextNode(arr[i].content + " Author: " + arr[i].username));
-                li.setAttribute("id", "tweet" + i);
-                li.setAttribute("class", "tweet");
-                li.style.border = "1px solid black";
-                posts.appendChild(li);
+    console.log($("#searchBar1"));
+    $("#searchBar1").submit((e) => {
+        e.preventDefault();
+        console.log(e + " inside searchbar");
+        $.ajax({
+            type: 'POST',
+            url: '/search',
+            data: $("#searchBar1").serialize(),
+            dataType: 'json',
+            success: (response) => {
+                console.log("SUCCESS " + response);
+                let items = response.items;
+                let posts = document.getElementById("posts");
+                while (posts.hasChildNodes()) {
+                    posts.removeChild(posts.lastChild);
+                }
+                if (!items || items.length === 0) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.style.color = 'red'
+                    div.innerHTML = "No tweets found with given timestamp/limit.";
+                    posts.appendChild(div);
+                    return;
+                }
+                for (let i = 0; i < items.length; i++) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.innerHTML = items[i].content + "<br>Author: " + items[i].username + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
+                    div.style.border = "10px solid blue";
+                    posts.appendChild(div);
+                }
             }
-        }
+        });
     });
+
+    $('#searchBarId').submit((e) => {
+        e.preventDefault();
+        console.log(e + " inside searchbarID");
+        $.ajax({
+            url: '/item/' + $('#searchBarId').serializeArray()[0].value,
+            type: 'GET',
+            success: (response) => {
+                let item = response.item;
+
+                console.log(item);
+                let posts = document.getElementById("posts");
+                while (posts.hasChildNodes()) {
+                    posts.removeChild(posts.lastChild);
+                }
+                let li = document.createElement("li");
+                if (!item) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.style.color = 'red'
+                    div.innerHTML = "Tweet not found.";
+                    posts.appendChild(div);
+                    return;
+                }
+                let div = document.createElement('div');
+                div.className = 'tweet';
+                div.innerHTML = item.content + "<br>Author: " + item.username + "<br>Likes: " + item.property.likes + "<br>Retweets: " + item.retweeted + "<br>Timestamp: " + item.timestamp;
+                div.style.border = "10px solid blue";
+                posts.appendChild(div);
+            }
+        });
+    });
+
+
+
+    // $.ajax({
+    //     url: "/search",
+    //     type: "POST",
+    //     success: (response) => {
+    //         console.log("Populating page with posts...");
+    //         let arr = response.items;
+    //         let posts = document.getElementById("posts");
+    //         for (let i = 0; i < arr.length; i++) {
+    //             let li = document.createElement("li");
+    //             li.appendChild(document.createTextNode(arr[i].content + " Author: " + arr[i].username));
+    //             li.setAttribute("id", "tweet" + i);
+    //             li.setAttribute("class", "tweet");
+    //             li.style.border = "1px solid black";
+    //             posts.appendChild(li);
+    //         }
+    //     }
+    // });
 
 </script>
 
@@ -89,7 +180,7 @@ sample.forEach((x) => {
           console.log("POSTED " + x);
         }
   });
-});
-</script> -->
+}); -->
+</script>
 
 <% include ../partials/footer %>
