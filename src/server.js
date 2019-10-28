@@ -290,6 +290,50 @@ app.get('/item/:id', (req, res) => {
     }
 });
 
+app.delete('/item/:id', (req, res) => {
+    let id = req.params.id;
+    if (!id) {
+        res.json({ status: "error", error: "invalid id" });
+    }
+    else {
+        let cookie = req.cookies.jwt;
+        if (typeof cookie === undefined || !cookie || !content) {
+            res.json({ status: "error", error: "invalid cookie/not logged in" });
+            console.log("invalid cookie " + cookie);
+        } else {
+            User.findOne({ 'token': cookie }, (err, user) => {
+                if (err) {
+                    console.log("invalid logout request " + cookie);
+                    res.status(400);
+                    res.json({ status: "error", error: "invalid cookie" });
+                } else {
+                    Tweet.findOne({ id: id }, (err, tweet) => {
+                        if (err) {
+                            res.json({status: "error", error: "tweet not found"});
+                        } else {
+                            if (tweet.username !== user.username) {
+                                res.status(400);
+                                res.json({status: "error", error: "attempting to delete another user's tweet"});
+                            } else {
+                                Tweet.deleteOne({id: id}, (err) => {
+                                    if (err) {
+                                        res.status(400); // error
+                                        res.json({status: "error", error:"unable to delete tweet " + id});
+                                    } else {
+                                        res.status(200); // success
+                                        res.json({status: "OK", message:"successfully deleted tweet"})
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                }
+            });
+        }
+    }
+});
+
 app.post('/search', (req, res) => {
     let timestamp = Number(req.body.timestamp);
     let limit = Number(req.body.limit);
