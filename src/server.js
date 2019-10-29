@@ -485,9 +485,12 @@ app.post('/follow', (req, res) => {
 
 
 app.post('/reset', (req, res) => {
-    User.deleteMany({});
-    Tweet.deleteMany({});
-    res.json({ status: "OK" });
+    User.deleteMany({}, (err) => {
+        Tweet.deleteMany({}, (err1) => {
+            res.json({ status: "OK" });
+        });
+    });
+
 });
 
 app.get('/verify', (req, res) => {
