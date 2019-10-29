@@ -21,8 +21,8 @@ var nodemailer = require("nodemailer");
 const dbServerIP = "localhost";
 const dbCollection = "users";
 var mongoose = require("mongoose/");
-var usersDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + dbCollection);
-var tweetsDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + "tweets");
+var usersDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + dbCollection, { useNewUrlParser: true, useUnifiedTopology: true });
+var tweetsDB = mongoose.createConnection("mongodb://" + dbServerIP + ":27017/" + "tweets", { useNewUrlParser: true, useUnifiedTopology: true });
 
 var userSchema = new mongoose.Schema({
     username: String,
@@ -373,6 +373,29 @@ app.get('/user/:username', (req, res) => {
     });
 });
 
+app.get('/user/:username/posts', (req, res) => {
+    let username = req.params.username;
+    let limit = req.body.limit;
+    if (!limit) limit = 50;
+    if (limit > 200) limit = 200;
+    User.findOne({ username }, (err, user) => {
+        if (err || !user) res.json({ status: "error", error: "user not found" });
+        else {
+            Tweet.find({ username }, (err, tweets) => {
+                if (err || !tweets) res.json({ status: "error", error: "tweet not found" });
+                else {
+                    posts = [];
+                    tweets.forEach((tweet) => {
+                        posts.push(tweet.id);
+                    });
+                    res.json({ status: "OK", items: posts });
+                }
+            });
+        }
+    });
+
+});
+
 
 
 
@@ -420,7 +443,7 @@ app.post("/reset", (req, res) => {
             User.remove({}, function (err) {
                 if (err) res.json({ status: "error", error: "failed to clear user collection" });
                 else {
-                    console.log('User collection removed')
+                    console.log('User collection removed');
                     res.json({ status: "OK" });
                 }
             });
