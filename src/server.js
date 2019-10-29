@@ -393,10 +393,90 @@ app.get('/user/:username/posts', (req, res) => {
             });
         }
     });
-
 });
 
+app.get('/user/:username/followers', (req, res) => {
+    let username = req.params.username;
+    let limit = req.body.limit;
+    if (!limit) limit = 50;
+    if (limit > 200) limit = 200;
+    User.findOne({ username }, (err, user) => {
+        if (err || !user) {
+            res.json({ status: "error", error: "user not found" });
+        } else {
+            let users = [];
+            user.followers.forEach((follower) => {
+                users.push(follower);
+            });
+            res.json({ status: "OK", users });
+        }
+    });
+});
 
+app.get('/user/:username/following', (req, res) => {
+    let username = req.params.username;
+    let limit = req.body.limit;
+    if (!limit) limit = 50;
+    if (limit > 200) limit = 200;
+    User.findOne({ username }, (err, user) => {
+        if (err || !user) {
+            res.json({ status: "error", error: "user not found" });
+        } else {
+            let users = [];
+            user.following.forEach((follow) => {
+                users.push(follow);
+            });
+            res.json({ status: "OK", users });
+        }
+    });
+});
+
+app.post('/follow', (req, res) => {
+    let cookie = req.cookies.jwt;
+    if (typeof cookie === undefined || !cookie) {
+        if (!content) {
+            res.json({ status: "error", error: "no content provided" })
+        }
+        else {
+            res.json({ status: "error", error: "invalid cookie" });
+            console.log("invalid cookie " + cookie);
+        }
+    } else {
+        let username = req.body.username;
+        let follow = req.body.follow;
+        // console.log(username);
+        if (!follow) follow = true;
+        User.findOne({ token: cookie }, (err, user) => {
+            if (err || !user) {
+                res.json({ status: "error", error: "user not found" });
+            } else {
+                User.findOne({ username }, (err, user1) => {
+                    let following = user.following;
+                    let followers = user1.followers;
+                    if (following.includes(user1.username)) {
+                        res.json({ status: "error", error: "already following user" });
+                    } else {
+                        following.push(user1.username);
+                        followers.push(user.username);
+                        console.log(following);
+                        console.log(followers);
+                        User.update(user, { following: following }, (err) => {
+                            if (err) console.log("error updating " + user);
+                            else console.log("updated following for " + user);
+                        });
+                        User.update(user1, { followers: followers }, (err) => {
+                            if (err) console.log("error updating " + user1);
+                            else console.log("updated followers for " + user1);
+                        });
+                        user.save();
+                        user1.save();
+                        res.json({ status: "OK" });
+                    }
+                });
+            }
+        });
+    }
+});
 
 
 app.post('/reset', (req, res) => {
