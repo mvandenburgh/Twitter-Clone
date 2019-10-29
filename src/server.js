@@ -81,9 +81,7 @@ function sendEmail(email, key) {
         from: 'verify@mv.cloud.compas.cs.stonybrook.edu',
         to: email,
         subject: 'Confirm Email',
-        //html: '<p>Click <a href="' + website + '/verify?' + qstr + '">this link</a> to verify your account or enter the following verification key on the website:<br>validation key: &lt' + key + '&gt</p>'
         text: "validation key: " + key,
-        // html: 'validation key: ' + key
     };
 
     transporter.sendMail(message, (error, info) => {
@@ -297,7 +295,7 @@ app.delete('/item/:id', (req, res) => {
     }
     else {
         let cookie = req.cookies.jwt;
-        if (typeof cookie === undefined || !cookie || !content) {
+        if (typeof cookie === undefined || !cookie) {
             res.json({ status: "error", error: "invalid cookie/not logged in" });
             console.log("invalid cookie " + cookie);
         } else {
@@ -309,19 +307,19 @@ app.delete('/item/:id', (req, res) => {
                 } else {
                     Tweet.findOne({ id: id }, (err, tweet) => {
                         if (err) {
-                            res.json({status: "error", error: "tweet not found"});
+                            res.json({ status: "error", error: "tweet not found" });
                         } else {
                             if (tweet.username !== user.username) {
                                 res.status(400);
-                                res.json({status: "error", error: "attempting to delete another user's tweet"});
+                                res.json({ status: "error", error: "attempting to delete another user's tweet" });
                             } else {
-                                Tweet.deleteOne({id: id}, (err) => {
+                                Tweet.deleteOne({ id: id }, (err) => {
                                     if (err) {
                                         res.status(400); // error
-                                        res.json({status: "error", error:"unable to delete tweet " + id});
+                                        res.json({ status: "error", error: "unable to delete tweet " + id });
                                     } else {
                                         res.status(200); // success
-                                        res.json({status: "OK", message:"successfully deleted tweet"})
+                                        res.json({ status: "OK", message: "successfully deleted tweet" })
                                     }
                                 });
                             }
@@ -390,6 +388,22 @@ app.get('/home', (req, res) => {
     }
 });
 
+
+app.post("/reset", (req, res) => {
+    Tweet.remove({}, function (err) {
+        if (err) res.json({ status: "error", error: "failed to clear tweet collection" });
+        else {
+            console.log('Tweet collection removed');
+            User.remove({}, function (err) {
+                if (err) res.json({ status: "error", error: "failed to clear user collection" });
+                else {
+                    console.log('User collection removed')
+                    res.json({ status: "OK" });
+                }
+            });
+        }
+    });
+});
 
 app.listen(port, () => {
     console.log('Server started on port ' + port);
