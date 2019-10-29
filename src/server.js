@@ -29,7 +29,9 @@ var userSchema = new mongoose.Schema({
     password: String,
     email: String,
     disable: Boolean,
-    token: String
+    token: String,
+    followers: Array,
+    following: Array
 });
 var User = usersDB.model("User", userSchema);
 
@@ -300,13 +302,13 @@ app.delete('/item/:id', (req, res) => {
             console.log("invalid cookie " + cookie);
         } else {
             User.findOne({ 'token': cookie }, (err, user) => {
-                if (err) {
+                if (err || !user) {
                     console.log("invalid logout request " + cookie);
                     res.status(400);
                     res.json({ status: "error", error: "invalid cookie" });
                 } else {
                     Tweet.findOne({ id: id }, (err, tweet) => {
-                        if (err) {
+                        if (err || !tweet) {
                             res.json({ status: "error", error: "tweet not found" });
                         } else {
                             if (tweet.username !== user.username) {
@@ -352,6 +354,27 @@ app.post('/search', (req, res) => {
         });
     });
 });
+
+app.get('/user/:username', (req, res) => {
+    let username = req.params.username;
+    User.findOne({ username }, (err, user) => {
+        if (err || !user) {
+            res.json({ status: "error", error: "user not found" });
+        } else {
+            res.json({
+                status: "OK",
+                user: {
+                    email: user.email,
+                    followers: user.followers.length,
+                    following: user.following.length
+                }
+            });
+        }
+    });
+});
+
+
+
 
 app.post('/reset', (req, res) => {
     User.deleteMany({});
