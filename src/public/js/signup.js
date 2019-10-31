@@ -4,6 +4,7 @@ $('#form')
         url: 'adduser',
         dataType: 'json',
         success: (response) => {
+            console.log(response);
             if (response.status === "error") {
                 document.getElementById("verify").innnerHTML = response.error;
             }

@@ -115,7 +115,7 @@ app.post('/adduser', (req, res) => {
     let username = req.body.username;
     let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
     User.findOne({ username: username }, (err, user1) => {
-        if (err || !user) {
+        if (user1) {
             res.json({status:"error", error:"user already exists"});
         }
         else {
