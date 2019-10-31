@@ -116,7 +116,7 @@ app.post('/adduser', (req, res) => {
     let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
     User.findOne({ username: username }, (err, user1) => {
         if (user1) {
-            res.json({status:"error", error:"user already exists"});
+            res.json({status:"error", error:"That username is already taken."});
         }
         else {
             let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');

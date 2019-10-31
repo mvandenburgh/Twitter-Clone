@@ -6,7 +6,7 @@ $('#form')
         success: (response) => {
             console.log(response);
             if (response.status === "error") {
-                document.getElementById("verify").innnerHTML = response.error;
+                document.getElementById("error").innnerHTML = response.error;
             }
             else {
                 $.ajax({
