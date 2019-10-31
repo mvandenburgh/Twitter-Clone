@@ -114,20 +114,25 @@ app.post('/adduser', (req, res) => {
     let email = req.body.email;
     let username = req.body.username;
     let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
-    if (!User.findOne({ username: username })) { res.send("Username already taken") }
-    else {
-        let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
-        sendEmail(email, key);
-        res.json({ status: "OK" });
-        let user = new User({ username, password, email, disable: true });
-        user.save((err, user) => {
-            if (err) {
-                console.log("Error: " + user + " couldn't be save to DB.");
-            } else {
-                console.log("The following user was added to the DB:\n" + user);
-            }
-        });
-    }
+    User.findOne({ username: username }, (err, user1) => {
+        if (err || !user) {
+            res.json({status:"error", error:"user already exists"});
+        }
+        else {
+            let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
+            sendEmail(email, key);
+            res.json({ status: "OK" });
+            let user = new User({ username, password, email, disable: true });
+            user.save((err, user) => {
+                if (err) {
+                    console.log("Error: " + user + " couldn't be save to DB.");
+                } else {
+                    console.log("The following user was added to the DB:\n" + user);
+                }
+            });
+        }
+    });
+    
 });
 
 app.post('/login', (req, res) => {
