@@ -363,7 +363,7 @@ app.post('/search', (req, res) => {
             qe += char + "|"
         }
         if (qe.length > 0) qe = qe.substring(0, qe.length-1);
-        query.content = { $regex: qe };
+        query.content = { $regex: new RegExp(qe, "i") };
     }
     if (username) query.username = username;
     let cookie = req.cookies.jwt;
