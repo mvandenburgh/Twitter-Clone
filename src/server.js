@@ -356,13 +356,21 @@ app.post('/search', (req, res) => {
     let query = {
         timestamp: { $lt: timestamp },
     }
-    if (qe && qe.trim() != "") query.content = { $regex: qe };
+    if (qe && qe.trim() != "") {
+        let sp = qe.split(" ");
+        qe = "";
+        for (char of sp) {
+            qe += char + "|"
+        }
+        if (qe.length > 0) qe = qe.substring(0, qe.length-1);
+        query.content = { $regex: qe };
+    }
     if (username) query.username = username;
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
     
-    // const util = require('util');
-    // console.log(util.inspect(query, false, null, true /* enable colors */))
+    const util = require('util');
+    console.log(util.inspect(query, false, null, true /* enable colors */))
 
     User.findOne({ token: cookie }, (err, loggedInUser) => {
         Tweet.find(query).limit(limit).then(async (tweets) => {
@@ -371,10 +379,10 @@ app.post('/search', (req, res) => {
                 let user = await userQuery.exec();
                 if ((loggedInUser && (user.followers.includes(loggedInUser.username) || !following)) || !loggedInUser) {
                     items.push(tweet);
-                    console.log(tweet);
+                    // console.log(tweet);
                 }
             }
-            console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
+            // console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
             res.json({
                 status: "OK",
                 items: items
