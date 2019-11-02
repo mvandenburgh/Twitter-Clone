@@ -343,7 +343,7 @@ app.post('/search', (req, res) => {
     let timestamp = Number(req.body.timestamp);
     let limit = Number(req.body.limit);
     let qe = req.body.q;
-    let username = String(req.body.username);
+    let username = req.body.username;
     let following = req.body.following;
     if (!timestamp) timestamp = Date.now() / 1000;
     if (!limit) limit = 25;
@@ -356,10 +356,14 @@ app.post('/search', (req, res) => {
     let query = {
         timestamp: { $lt: timestamp },
     }
-    if (qe) query.content = { $regex: qe };
+    if (qe && qe.trim() != "") query.content = { $regex: qe };
     if (username) query.username = username;
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
+    
+    // const util = require('util');
+    // console.log(util.inspect(query, false, null, true /* enable colors */))
+
     User.findOne({ token: cookie }, (err, loggedInUser) => {
         Tweet.find(query).limit(limit).then(async (tweets) => {
             for (tweet of tweets) {
@@ -367,11 +371,10 @@ app.post('/search', (req, res) => {
                 let user = await userQuery.exec();
                 if ((loggedInUser && (user.followers.includes(loggedInUser.username) || !following)) || !loggedInUser) {
                     items.push(tweet);
-                    console.log(items);
+                    console.log(tweet);
                 }
-                console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
-               
             }
+            console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
             res.json({
                 status: "OK",
                 items: items
