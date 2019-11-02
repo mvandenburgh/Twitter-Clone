@@ -342,22 +342,40 @@ app.delete('/item/:id', (req, res) => {
 app.post('/search', (req, res) => {
     let timestamp = Number(req.body.timestamp);
     let limit = Number(req.body.limit);
+    let qe = req.body.qe;
+    let username = req.body.username;
+    let following = req.body.following;
     if (!timestamp) timestamp = Date.now() / 1000;
     if (!limit) limit = 25;
     if (limit > 100) limit = 100;
+    if (typeof following === undefined) following = true;
     let items = [];
     console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
-    Tweet.find({ timestamp: { $lt: timestamp } }).limit(limit).then((tweets) => {
-        tweets.forEach((tweet) => {
-            items.push(tweet);
-            console.log(tweet);
-        });
-        console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
-        res.json({
-            status: "OK",
-            items: items
+    let query = {
+        timestamp: {$lt: timestamp},
+    }
+    if (qe) query.content = {$regex: qe};
+    if (username) query.username = {username};
+    let cookie = req.cookies.jwt;
+    if (!cookie) cookie = "";
+    User.findOne({token:cookie}, (err, loggedInUser) => {
+        Tweet.find(query).limit(limit).then((tweets) => {
+            tweets.forEach((tweet) => {
+                User.findOne({username: tweet.username}, (err, user) => {
+                    if ((loggedInUser && user.followers.includes(loggedInUser.username)) || !loggedInUser) {
+                        items.push(tweet);
+                        console.log(tweet);
+                    }
+                });
+            });
+            console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
+            res.json({
+                status: "OK",
+                items: items
+            });
         });
     });
+    
 });
 
 app.get('/user/:username', (req, res) => {
