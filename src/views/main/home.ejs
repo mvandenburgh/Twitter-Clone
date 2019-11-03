@@ -47,6 +47,11 @@
         <button type="submit">Post Tweet</button>
     </form>
 
+    <form id="deleteTweet" method="DELETE" action="/additem">
+        <input type="text" name="content" placeholder="tweet">
+        <button type="submit">Delete Tweet</button>
+    </form>
+
     <form id="searchBarId" method="GET" action="/id">
         <input type="text" name="id" placeholder="id">
         <button type="submit">Search by id</button>
@@ -109,6 +114,55 @@
                     div.style.border = "10px solid blue";
                     posts.appendChild(div);
                 }
+            }
+        });
+    });
+
+    $("#searchBar1").submit((e) => {
+        e.preventDefault();
+        console.log(e + " inside searchbar");
+        $.ajax({
+            type: 'POST',
+            url: '/search',
+            data: $("#searchBar1").serialize(),
+            dataType: 'json',
+            success: (response) => {
+                console.log("SUCCESS " + response);
+                let items = response.items;
+                let posts = document.getElementById("posts");
+                while (posts.hasChildNodes()) {
+                    posts.removeChild(posts.lastChild);
+                }
+                if (!items || items.length === 0) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.style.color = 'red'
+                    div.innerHTML = "No tweets found with given timestamp/limit.";
+                    posts.appendChild(div);
+                    return;
+                }
+                for (let i = 0; i < items.length; i++) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.innerHTML = items[i].content + "<br>Author: " + items[i].username + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
+                    div.style.border = "10px solid blue";
+                    posts.appendChild(div);
+                }
+            }
+        });
+    });
+
+
+    $("#deleteTweet").submit((e) => {
+        e.preventDefault();
+        $.ajax({
+            type: 'DELETE',
+            url: '/item/' + $("#deleteTweet").serializeArray()[0].value,
+            data: $("#deleteTweet").serialize(),
+            dataType: 'json',
+            success: (response) => {
+               console.log(response);
+               console.log("DELETED TEWIEJOTWEOITWIEJTIIOJ!!I!IOJ!OJ!IO!JIJOI!J");
             }
         });
     });

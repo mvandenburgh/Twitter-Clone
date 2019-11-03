@@ -244,7 +244,7 @@ app.post('/additem', (req, res) => {
                 console.log("invalid logout request " + cookie);
                 res.json({ status: "error", error: "invalid cookie" });
             } else {
-                let uniqueID = uuidv1();
+                let uniqueID = uuidv1().substring(0, 8);
                 let tweet = new Tweet({
                     id: uniqueID,
                     username: user.username,
@@ -302,7 +302,7 @@ app.delete('/item/:id', (req, res) => {
     }
     else {
         let cookie = req.cookies.jwt;
-        if (typeof cookie === undefined || !cookie) {
+        if (typeof cookie === "undefined" || !cookie) {
             res.json({ status: "error", error: "invalid cookie/not logged in" });
             console.log("invalid cookie " + cookie);
         } else {
