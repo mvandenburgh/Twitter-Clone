@@ -416,6 +416,7 @@ app.get('/user/:username/posts', (req, res) => {
     console.log("LIMIT: " + limit);
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
+    limit = Number(limit);
     User.findOne({ username }, (err, user) => {
         if (err || !user) res.json({ status: "error", error: "user not found" });
         else {
@@ -438,6 +439,7 @@ app.get('/user/:username/followers', (req, res) => {
     let limit = req.query.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
+    limit = Number(limit);
     User.findOne({ username }, (err, user) => {
         if (err || !user) {
             res.json({ status: "error", error: "user not found" });
@@ -459,6 +461,7 @@ app.get('/user/:username/following', (req, res) => {
     let limit = req.query.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
+    limit = Number(limit);
     User.findOne({ username }, (err, user) => {
         if (err || !user) {
             res.json({ status: "error", error: "user not found" });
