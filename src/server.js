@@ -88,9 +88,9 @@ function sendEmail(email, key) {
 
     transporter.sendMail(message, (error, info) => {
         if (error) {
-            return console.log(error);
+            console.log(error);
         }
-        console.log('Message sent: %s', info.messageId + " (" + new Date() + ")");
+        // console.log('Message sent: %s', info.messageId + " (" + new Date() + ")");
     });
 }
 
@@ -125,9 +125,9 @@ app.post('/adduser', (req, res) => {
             let user = new User({ username, password, email, disable: true });
             user.save((err, user) => {
                 if (err) {
-                    console.log("Error: " + user + " couldn't be save to DB.");
+                    // console.log("Error: " + user + " couldn't be save to DB.");
                 } else {
-                    console.log("The following user was added to the DB:\n" + user);
+                    // console.log("The following user was added to the DB:\n" + user);
                 }
             });
         }
@@ -138,7 +138,7 @@ app.post('/adduser', (req, res) => {
 app.post('/login', (req, res) => {
     let username = req.body.username;
     let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
-    console.log("Attempting to login " + username);
+    // console.log("Attempting to login " + username);
     if (!username || !password) {
         console.log("u or p invalid");
         res.json({ status: "error", error: "Username and/or password is invalid" });
@@ -160,7 +160,7 @@ app.post('/login', (req, res) => {
                             if (err) {
                                 console.log(user + " failed to generate cookie...");
                             } else {
-                                console.log("Generated cookie " + token + " for user " + user);
+                                // console.log("Generated cookie " + token + " for user " + user);
                             }
                         });
                         res.cookie('jwt', token);
@@ -214,7 +214,7 @@ app.post("/verify", (req, res) => {
                             console.log(user + " not verified....");
                             res.json({ status: "error", error: "account verification failed" });
                         } else {
-                            console.log(user + " account has been verified");
+                            // console.log(user + " account has been verified");
                             res.json({ status: "OK" });
                         }
                     });
@@ -258,10 +258,10 @@ app.post('/additem', (req, res) => {
                     if (err) {
                         console.log("Error: failed to post tweet  " + tweet);
                     } else {
-                        console.log(tweet + " posted successfully.");
+                        // console.log(tweet + " posted successfully.");
                     }
                     res.json({ status: "OK", id: uniqueID });
-                    console.log("response is {status: OK, id: " + uniqueID + " }.");
+                    // console.log("response is {status: OK, id: " + uniqueID + " }.");
                 });
 
             }
@@ -350,9 +350,9 @@ app.post('/search', (req, res) => {
     if (limit > 100) limit = 100;
     if (typeof following === "undefined" || following === "true") following = true;
     else if (following === "false") following = false;
-    console.log("following: " + following);
+    // console.log("following: " + following);
     let items = [];
-    console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
+    // console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
     let query = {
         timestamp: { $lt: timestamp },
     }
@@ -369,8 +369,8 @@ app.post('/search', (req, res) => {
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
     
-    const util = require('util');
-    console.log(util.inspect(query, false, null, true /* enable colors */))
+    // const util = require('util');
+    // console.log(util.inspect(query, false, null, true /* enable colors */))
 
     User.findOne({ token: cookie }, (err, loggedInUser) => {
         Tweet.find(query).limit(limit).then(async (tweets) => {
