@@ -411,7 +411,9 @@ app.get('/user/:username', (req, res) => {
 
 app.get('/user/:username/posts', (req, res) => {
     let username = req.params.username;
-    let limit = req.body.limit;
+    let limit = req.params.limit;
+    console.log("/user/" + username + "/posts");
+    console.log("LIMIT: " + limit);
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     User.findOne({ username }, (err, user) => {
@@ -433,7 +435,7 @@ app.get('/user/:username/posts', (req, res) => {
 
 app.get('/user/:username/followers', (req, res) => {
     let username = req.params.username;
-    let limit = req.body.limit;
+    let limit = req.params.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     User.findOne({ username }, (err, user) => {
@@ -451,7 +453,7 @@ app.get('/user/:username/followers', (req, res) => {
 
 app.get('/user/:username/following', (req, res) => {
     let username = req.params.username;
-    let limit = req.body.limit;
+    let limit = req.params.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     User.findOne({ username }, (err, user) => {
