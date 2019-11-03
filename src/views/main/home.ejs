@@ -57,10 +57,15 @@
         <button type="submit">Search by id</button>
     </form>
 
+    <br>
     <form id="searchBar1" method="POST" action="/search">
         <input type="text" name="timestamp" placeholder="timestamp">
         <input type="text" name="limit" placeholder="limit">
-        <button type="submit">Search by timestamp and/or limit</button>
+        <input type="text" name="q" placeholder="search query">
+        <input type="text" name="username" placeholder="username">
+        <input type="checkbox" name="following" id="cbox">
+        <label for="cbox">Include people you're not following?</label>
+        <button type="submit">Search</button>
     </form>
 
     <ul id="posts"></ul>
@@ -86,11 +91,15 @@
     console.log($("#searchBar1"));
     $("#searchBar1").submit((e) => {
         e.preventDefault();
-        console.log(e + " inside searchbar");
+        let dat = $("#searchBar1").serializeArray();
+        console.log(dat);
+        if (dat.length > 4 && dat[4].value === 'on') dat[4].value = false;
+        else dat.push({name:"following", value:true});
+        console.log();
         $.ajax({
             type: 'POST',
             url: '/search',
-            data: $("#searchBar1").serialize(),
+            data: dat,
             dataType: 'json',
             success: (response) => {
                 console.log("SUCCESS " + response);
@@ -108,6 +117,7 @@
                     return;
                 }
                 for (let i = 0; i < items.length; i++) {
+                    console.log(items[i].content);
                     let div = document.createElement('div');
                     div.className = 'tweet';
                     div.innerHTML = items[i].content + "<br>Author: " + items[i].username + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
@@ -118,39 +128,39 @@
         });
     });
 
-    $("#searchBar1").submit((e) => {
-        e.preventDefault();
-        console.log(e + " inside searchbar");
-        $.ajax({
-            type: 'POST',
-            url: '/search',
-            data: $("#searchBar1").serialize(),
-            dataType: 'json',
-            success: (response) => {
-                console.log("SUCCESS " + response);
-                let items = response.items;
-                let posts = document.getElementById("posts");
-                while (posts.hasChildNodes()) {
-                    posts.removeChild(posts.lastChild);
-                }
-                if (!items || items.length === 0) {
-                    let div = document.createElement('div');
-                    div.className = 'tweet';
-                    div.style.color = 'red'
-                    div.innerHTML = "No tweets found with given timestamp/limit.";
-                    posts.appendChild(div);
-                    return;
-                }
-                for (let i = 0; i < items.length; i++) {
-                    let div = document.createElement('div');
-                    div.className = 'tweet';
-                    div.innerHTML = items[i].content + "<br>Author: " + items[i].username + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
-                    div.style.border = "10px solid blue";
-                    posts.appendChild(div);
-                }
-            }
-        });
-    });
+    // $("#searchBar1").submit((e) => {
+    //     e.preventDefault();
+    //     console.log(e + " inside searchbar");
+    //     $.ajax({
+    //         type: 'POST',
+    //         url: '/search',
+    //         data: $("#searchBar1").serialize(),
+    //         dataType: 'json',
+    //         success: (response) => {
+    //             console.log("SUCCESS " + response);
+    //             let items = response.items;
+    //             let posts = document.getElementById("posts");
+    //             while (posts.hasChildNodes()) {
+    //                 posts.removeChild(posts.lastChild);
+    //             }
+    //             if (!items || items.length === 0) {
+    //                 let div = document.createElement('div');
+    //                 div.className = 'tweet';
+    //                 div.style.color = 'red'
+    //                 div.innerHTML = "No tweets found with given timestamp/limit.";
+    //                 posts.appendChild(div);
+    //                 return;
+    //             }
+    //             for (let i = 0; i < items.length; i++) {
+    //                 let div = document.createElement('div');
+    //                 div.className = 'tweet';
+    //                 div.innerHTML = items[i].content + "<br>Author: " + items[i].username + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
+    //                 div.style.border = "10px solid blue";
+    //                 posts.appendChild(div);
+    //             }
+    //         }
+    //     });
+    // });
 
 
     $("#deleteTweet").submit((e) => {
