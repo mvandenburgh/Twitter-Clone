@@ -362,13 +362,13 @@ app.post('/search', (req, res) => {
         for (char of sp) {
             qe += char + "|"
         }
-        if (qe.length > 0) qe = qe.substring(0, qe.length-1);
+        if (qe.length > 0) qe = qe.substring(0, qe.length - 1);
         query.content = { $regex: new RegExp(qe, "i") };
     }
     if (username) query.username = username;
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
-    
+
     // const util = require('util');
     // console.log(util.inspect(query, false, null, true /* enable colors */))
 
@@ -387,8 +387,8 @@ app.post('/search', (req, res) => {
                 status: "OK",
                 items: items
             });
+        });
     });
-});
 });
 
 app.get('/user/:username', (req, res) => {
@@ -411,7 +411,7 @@ app.get('/user/:username', (req, res) => {
 
 app.get('/user/:username/posts', (req, res) => {
     let username = req.params.username;
-    let limit = req.params.limit;
+    let limit = req.query.limit;
     console.log("/user/" + username + "/posts");
     console.log("LIMIT: " + limit);
     if (!limit) limit = 50;
@@ -435,7 +435,7 @@ app.get('/user/:username/posts', (req, res) => {
 
 app.get('/user/:username/followers', (req, res) => {
     let username = req.params.username;
-    let limit = req.params.limit;
+    let limit = req.query.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     User.findOne({ username }, (err, user) => {
@@ -453,7 +453,7 @@ app.get('/user/:username/followers', (req, res) => {
 
 app.get('/user/:username/following', (req, res) => {
     let username = req.params.username;
-    let limit = req.params.limit;
+    let limit = req.query.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     User.findOne({ username }, (err, user) => {
