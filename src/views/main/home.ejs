@@ -42,23 +42,23 @@
         <%= username %>'s home page
     </div>
 
-    <form id="postTweet" method="POST" action="/additem">
+    <form class="homeForm" id="postTweet" method="POST" action="/additem">
         <input type="text" name="content" placeholder="tweet">
         <button type="submit">Post Tweet</button>
     </form>
 
-    <form id="deleteTweet" method="DELETE" action="/additem">
+    <form class="homeForm" id="deleteTweet" method="DELETE" action="/additem">
         <input type="text" name="content" placeholder="tweet">
         <button type="submit">Delete Tweet</button>
     </form>
 
-    <form id="searchBarId" method="GET" action="/id">
+    <form class="homeForm" id="searchBarId" method="GET" action="/id">
         <input type="text" name="id" placeholder="id">
         <button type="submit">Search by id</button>
     </form>
 
     <br>
-    <form id="searchBar1" method="POST" action="/search">
+    <form class="homeForm" id="searchBar1" method="POST" action="/search">
         <input type="text" name="timestamp" placeholder="timestamp">
         <input type="text" name="limit" placeholder="limit">
         <input type="text" name="q" placeholder="search query">
