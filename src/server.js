@@ -298,35 +298,31 @@ app.get('/item/:id', (req, res) => {
 app.delete('/item/:id', (req, res) => {
     let id = req.params.id;
     if (!id) {
-        res.json({ status: "error", error: "invalid id" });
+        res.status(400).json({ status: "error", error: "invalid id" });
     }
     else {
         let cookie = req.cookies.jwt;
         if (typeof cookie === "undefined" || !cookie) {
-            res.json({ status: "error", error: "invalid cookie/not logged in" });
+            res.status(400).json({ status: "error", error: "invalid cookie/not logged in" });
             console.log("invalid cookie " + cookie);
         } else {
             User.findOne({ 'token': cookie }, (err, user) => {
                 if (err || !user) {
                     console.log("invalid logout request " + cookie);
-                    res.status(400);
-                    res.json({ status: "error", error: "invalid cookie" });
+                    res.status(400).json({ status: "error", error: "invalid cookie" });
                 } else {
                     Tweet.findOne({ id: id }, (err, tweet) => {
                         if (err || !tweet) {
-                            res.json({ status: "error", error: "tweet not found" });
+                            res.status(400).json({ status: "error", error: "tweet not found" });
                         } else {
                             if (tweet.username !== user.username) {
-                                res.status(400);
-                                res.json({ status: "error", error: "attempting to delete another user's tweet" });
+                                res.status(400).json({ status: "error", error: "attempting to delete another user's tweet" });
                             } else {
                                 Tweet.deleteOne({ id: id }, (err) => {
                                     if (err) {
-                                        res.status(400); // error
-                                        res.json({ status: "error", error: "unable to delete tweet " + id });
+                                        res.status(400).json({ status: "error", error: "unable to delete tweet " + id });
                                     } else {
-                                        res.status(200); // success
-                                        res.json({ status: "OK", message: "successfully deleted tweet" })
+                                        res.status(200).json({ status: "OK", message: "successfully deleted tweet" }); // success
                                     }
                                 });
                             }
@@ -491,33 +487,40 @@ app.post('/follow', (req, res) => {
     } else {
         let username = req.body.username;
         let follow = req.body.follow;
-        if (typeof follow === "undefined") follow = "true";
-        follow = follow == "true";
+        if (follow === "false") follow = false;
+        if (follow != true && follow != false) follow = true;
+        console.log("FOLLOW?: " + follow);
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
+                console.log("error not logged in");
                 res.json({ status: "error", error: "not logged in" });
             } else {
                 if (user.username === username) {
                     res.json({ status: "error", error: "can't follow yourself" });
+                    console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
                 }
                 else {
                     User.findOne({ username }, (err, user1) => {
                         if (err || !user1) {
                             res.json({ status: "error", error: "user doesn't exist." });
+                            console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
                         }
                         else {
-                            if (!follow) {
-
-                            }
                             let following = user.following;
                             let followers = user1.followers;
-                            if ((follow && following.includes(user1.username)) || (!follow && !(following.includes(user1.username)))) {
+                            console.log("Following: " + following);
+                            console.log("Wants to follow: " + user1.username);
+                            console.log("Their followers: " + followers);                            
+                            if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
                                 if (follow) {
                                     res.json({ status: "error", error: "already following user" });
+                                    console.log("res.json({ status: \"error\", error: \"already following user\" });")
                                 }
                                 else {
                                     res.json({ status: "error", error: "not following this user to begin with." });
+                                    console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
                                 }
+                                // res.json({status:"OK", message:"already following user/not following user, no action needed"});
                             } else {
                                 if (follow) {
                                     following.push(user1.username);
@@ -537,6 +540,7 @@ app.post('/follow', (req, res) => {
                                 user.save();
                                 user1.save();
                                 res.json({ status: "OK" });
+                                console.log("res.json({ status: \"OK\" });")
 
                             }
                         }
