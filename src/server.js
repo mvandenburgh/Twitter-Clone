@@ -449,7 +449,7 @@ app.get('/user/:username/followers', (req, res) => {
             for (follower of user.followers) {
                 if (counter === limit) break;
                 users.push(follower);
-                counter++;   
+                counter++;
             }
             res.json({ status: "OK", users });
         }
@@ -493,35 +493,41 @@ app.post('/follow', (req, res) => {
         let follow = req.body.follow;
         // console.log(username);
         if (!follow) follow = true;
+        follow = Boolean(follow);
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
-                res.json({ status: "error", error: "user not found" });
+                res.json({ status: "error", error: "not logged in" });
             } else {
                 if (user.username === username) {
                     res.json({ status: "error", error: "can't follow yourself" });
                 }
                 else {
                     User.findOne({ username }, (err, user1) => {
-                        let following = user.following;
-                        let followers = user1.followers;
-                        if (following.includes(user1.username)) {
-                            res.json({ status: "error", error: "already following user" });
-                        } else {
-                            following.push(user1.username);
-                            followers.push(user.username);
-                            console.log(following);
-                            console.log(followers);
-                            User.update(user, { following: following }, (err) => {
-                                if (err) console.log("error updating " + user);
-                                else console.log("updated following for " + user);
-                            });
-                            User.update(user1, { followers: followers }, (err) => {
-                                if (err) console.log("error updating " + user1);
-                                else console.log("updated followers for " + user1);
-                            });
-                            user.save();
-                            user1.save();
-                            res.json({ status: "OK" });
+                        if (err || !user1) {
+                            res.json({ status: "error", error: "user doesn't exist." });
+                        }
+                        else {
+                            let following = user.following;
+                            let followers = user1.followers;
+                            if (following.includes(user1.username)) {
+                                res.json({ status: "error", error: "already following user" });
+                            } else {
+                                following.push(user1.username);
+                                followers.push(user.username);
+                                console.log(following);
+                                console.log(followers);
+                                User.update(user, { following: following }, (err) => {
+                                    if (err) console.log("error updating " + user);
+                                    else console.log("updated following for " + user);
+                                });
+                                User.update(user1, { followers: followers }, (err) => {
+                                    if (err) console.log("error updating " + user1);
+                                    else console.log("updated followers for " + user1);
+                                });
+                                user.save();
+                                user1.save();
+                                res.json({ status: "OK" });
+                            }
                         }
                     });
                 }
