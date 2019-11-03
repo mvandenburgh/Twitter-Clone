@@ -491,9 +491,8 @@ app.post('/follow', (req, res) => {
     } else {
         let username = req.body.username;
         let follow = req.body.follow;
-        // console.log(username);
-        if (typeof follow === "undefined") follow = true;
-        follow = Boolean(follow);
+        if (typeof follow === "undefined") follow = "true";
+        follow = follow == "true";
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
                 res.json({ status: "error", error: "not logged in" });
@@ -512,9 +511,13 @@ app.post('/follow', (req, res) => {
                             }
                             let following = user.following;
                             let followers = user1.followers;
-                            if ((follow && following.includes(user1.username)) || (!follow && !follow.includes(user1.username))) {
-                                if (follow) res.json({ status: "error", error: "already following user" });
-                                else res.json({ status: "error", error: "not following this user to begin with." });
+                            if ((follow && following.includes(user1.username)) || (!follow && !(following.includes(user1.username)))) {
+                                if (follow) {
+                                    res.json({ status: "error", error: "already following user" });
+                                }
+                                else {
+                                    res.json({ status: "error", error: "not following this user to begin with." });
+                                }
                             } else {
                                 if (follow) {
                                     following.push(user1.username);
