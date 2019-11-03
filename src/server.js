@@ -507,15 +507,22 @@ app.post('/follow', (req, res) => {
                             res.json({ status: "error", error: "user doesn't exist." });
                         }
                         else {
+                            if (!follow) {
+
+                            }
                             let following = user.following;
                             let followers = user1.followers;
-                            if (following.includes(user1.username)) {
-                                res.json({ status: "error", error: "already following user" });
+                            if ((follow && following.includes(user1.username)) || (!follow && !follow.includes(user1.username))) {
+                                if (follow) res.json({ status: "error", error: "already following user" });
+                                else res.json({ status: "error", error: "not following this user to begin with." });
                             } else {
-                                following.push(user1.username);
-                                followers.push(user.username);
-                                console.log(following);
-                                console.log(followers);
+                                if (follow) {
+                                    following.push(user1.username);
+                                    followers.push(user.username);
+                                } else {
+                                    following.splice(following.indexOf(user1.username), 1);
+                                    followers.splice(followers.indexOf(user.username), 1);
+                                }
                                 User.update(user, { following: following }, (err) => {
                                     if (err) console.log("error updating " + user);
                                     else console.log("updated following for " + user);
@@ -527,6 +534,7 @@ app.post('/follow', (req, res) => {
                                 user.save();
                                 user1.save();
                                 res.json({ status: "OK" });
+
                             }
                         }
                     });
