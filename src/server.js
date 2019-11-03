@@ -492,7 +492,7 @@ app.post('/follow', (req, res) => {
         let username = req.body.username;
         let follow = req.body.follow;
         // console.log(username);
-        if (!follow) follow = true;
+        if (typeof follow === "undefined") follow = true;
         follow = Boolean(follow);
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
