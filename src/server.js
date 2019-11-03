@@ -416,11 +416,11 @@ app.get('/user/:username/posts', (req, res) => {
     console.log("LIMIT: " + limit);
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
-    User.findOne({ username }).limit(limit).then((err, user) => {
+    User.findOne({ username }, (err, user) => {
         if (err || !user) res.json({ status: "error", error: "user not found" });
         else {
-            Tweet.find({ username }, (err, tweets) => {
-                if (err || !tweets) res.json({ status: "error", error: "tweet not found" });
+            Tweet.find({ username }).limit(limit).then((tweets) => {
+                if (!tweets) res.json({ status: "error", error: "tweet not found" });
                 else {
                     posts = [];
                     tweets.forEach((tweet) => {
@@ -438,14 +438,17 @@ app.get('/user/:username/followers', (req, res) => {
     let limit = req.query.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
-    User.findOne({ username }).limit(limit).then((err, user) => {
+    User.findOne({ username }, (err, user) => {
         if (err || !user) {
             res.json({ status: "error", error: "user not found" });
         } else {
             let users = [];
-            user.followers.forEach((follower) => {
+            let counter = 0;
+            for (follower of user.followers) {
+                if (counter === limit) break;
                 users.push(follower);
-            });
+                counter++;   
+            }
             res.json({ status: "OK", users });
         }
     });
@@ -456,14 +459,17 @@ app.get('/user/:username/following', (req, res) => {
     let limit = req.query.limit;
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
-    User.findOne({ username }).limit(limit).then((err, user) => {
+    User.findOne({ username }, (err, user) => {
         if (err || !user) {
             res.json({ status: "error", error: "user not found" });
         } else {
             let users = [];
-            user.following.forEach((follow) => {
+            let counter = 0;
+            for (follow of user.following) {
+                if (counter === limit) break;
                 users.push(follow);
-            });
+                counter++;
+            }
             res.json({ status: "OK", users });
         }
     });
