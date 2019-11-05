@@ -1,8 +1,8 @@
 <% include ../partials/header %>
 <div id=root>
     <span id="username" style="font-size: 2em;"><%= username %></span>
-    <span id="followerCount">Followers: </span>
-    <span id="followingCount">Following: </span>
+    <div>Followers: <span id="followerCount"></span></div>
+    <div>Following: <span id="followingCount"></span></div>
 
     <div id="info"></div>
 
@@ -11,50 +11,163 @@
 <button id="postBtn">Get Posts</button>
 <button id="followerBtn">Get Followers</button>
 <button id="followingBtn">Get Following</button>
+<br><br>
+<button id="follow">Follow this User</button>
+<button id="unfollow">Unfollow this User</button>
 
 <script src="https://code.jquery.com/jquery-3.4.1.min.js"
     integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 
 <script>
-$.ajax({
-    url: '/user/' + document.getElementById(username).innerHTML,
-    type: 'GET',
-    success: (res) => {
-        document.getElementById("followerCount").innerHTML += res.user.followers;
-        document.getElementById("followingCount").innerHTML += res.user.following;
-    }
-});
 
-document.getElementById("postBtn").addEventListener("click", (e) => {
+
+
     $.ajax({
-        url: '/user/' + document.getElementById(username).innerHTML + '/posts',
+        url: '/user/' + document.getElementById("username").innerHTML,
         type: 'GET',
         success: (res) => {
-            let items = res.users;
-            let info = document.getElementById("info");
-            while (info.hasChildNodes()) {
-                    info.removeChild(info.lastChild);
+            document.getElementById("followerCount").innerHTML = res.user.followers;
+            document.getElementById("followingCount").innerHTML = res.user.following;
+        }
+    });
+
+    document.getElementById("follow").addEventListener("click", (e) => {
+        $.ajax({
+            url: '/follow',
+            data: { username: document.getElementById("username").innerHTML },
+            type: 'POST',
+            success: (res) => {
+                document.getElementById("info").innerHTML = "following " + (res.status === "OK" ? "successful!" : "error: " + res.error);
+                if (res.status === 'error') {
+                    document.getElementById('info').style.color = "red";
+                }
+                else {
+                    document.getElementById('info').style.color = "black";
+                }
+                $.ajax({
+                    url: '/user/' + document.getElementById("username").innerHTML,
+                    type: 'GET',
+                    success: (res) => {
+                        document.getElementById("followerCount").innerHTML = res.user.followers;
+                        document.getElementById("followingCount").innerHTML = res.user.following;
+                    }
+                });
             }
-            if (!items || items.length === 0) {
+        });
+    });
+
+    document.getElementById("unfollow").addEventListener("click", (e) => {
+        $.ajax({
+            url: '/follow',
+            data: { username: document.getElementById("username").innerHTML, follow: false },
+            type: 'POST',
+            success: (res) => {
+                document.getElementById("info").innerHTML = "unfollow " + (res.status === "OK" ? "successful!" : "error: " + res.error);
+                $.ajax({
+                    url: '/user/' + document.getElementById("username").innerHTML,
+                    type: 'GET',
+                    success: (res) => {
+                        document.getElementById("followerCount").innerHTML = res.user.followers;
+                        document.getElementById("followingCount").innerHTML = res.user.following;
+                    }
+                });
+            }
+        });
+    });
+
+    document.getElementById("postBtn").addEventListener("click", (e) => {
+        $.ajax({
+            url: '/user/' + document.getElementById("username").innerHTML + '/posts',
+            type: 'GET',
+            success: (res) => {
+                let items = res.items;
+                let info = document.getElementById("info");
+                while (info.hasChildNodes()) {
+                    info.removeChild(info.lastChild);
+                }
+                if (!items || items.length === 0) {
                     let div = document.createElement('div');
                     div.className = 'tweet';
                     div.style.color = 'red'
-                    div.innerHTML = "No tweets found with given timestamp/limit.";
+                    div.innerHTML = "No tweets found.";
                     info.appendChild(div);
                     return;
-            }
-            for (let i = 0; i < items.length; i++) {
-                    console.log(items[i].content);
+                }
+                for (let i = 0; i < items.length; i++) {
                     let div = document.createElement('div');
                     div.className = 'tweet';
-                    div.innerHTML = items[i].content + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
+                    $.ajax({
+                        url: '/item/' + items[i],
+                        type: 'GET',
+                        success: (res) => {
+                            div.innerHTML = res.item.content + "<br>Likes: " + res.item.property.likes + "<br>Retweets: " + res.item.retweeted + "<br>Timestamp: " + res.item.timestamp;
+                            div.style.border = "10px solid blue";
+                            info.appendChild(div);
+                        }
+                    })
+
+                }
+            }
+        });
+    });
+
+    document.getElementById("followerBtn").addEventListener("click", (e) => {
+        $.ajax({
+            url: '/user/' + document.getElementById("username").innerHTML + '/followers',
+            type: 'GET',
+            success: (res) => {
+                let users = res.users;
+                let info = document.getElementById("info");
+                while (info.hasChildNodes()) {
+                    info.removeChild(info.lastChild);
+                }
+                if (!users || users.length === 0) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.style.color = 'red'
+                    div.innerHTML = "No followers found.";
+                    info.appendChild(div);
+                    return;
+                }
+                for (let i = 0; i < users.length; i++) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.innerHTML = users[i];
                     div.style.border = "10px solid blue";
                     info.appendChild(div);
                 }
-        }
+            }
+        });
     });
-});
 
+    document.getElementById("followingBtn").addEventListener("click", (e) => {
+        $.ajax({
+            url: '/user/' + document.getElementById("username").innerHTML + '/following',
+            type: 'GET',
+            success: (res) => {
+                let users = res.users;
+                let info = document.getElementById("info");
+                while (info.hasChildNodes()) {
+                    info.removeChild(info.lastChild);
+                }
+                if (!users || users.length === 0) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.style.color = 'red'
+                    div.innerHTML = "Not following any users.";
+                    info.appendChild(div);
+                    return;
+                }
+                for (let i = 0; i < users.length; i++) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.innerHTML = users[i];
+                    div.style.border = "10px solid blue";
+                    info.appendChild(div);
+                }
+            }
+        });
+    });
 
 
 </script>

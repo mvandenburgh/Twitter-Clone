@@ -106,6 +106,12 @@ app.get('/', (req, res) => {
     }
 });
 
+app.get('/info', (req, res) => {
+    let username = req.query.username;
+    if (!username) res.send("ERROR");
+    else res.render("main/user.ejs", {username})
+});
+
 app.get('/adduser', (req, res) => {
     res.render("signup/signup.ejs");
 });
@@ -539,7 +545,7 @@ app.post('/follow', (req, res) => {
                                 });
                                 user.save();
                                 user1.save();
-                                res.json({ status: "OK" });
+                                res.json({ status: "OK", message: "success" });
                                 console.log("res.json({ status: \"OK\" });")
 
                             }

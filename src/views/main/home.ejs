@@ -59,8 +59,9 @@
 
     <br>
 
-    <form class="homeForm" id="userSearch" method="GET" action="/user">
+    <form class="homeForm" id="userSearch" method="GET" action="/info">
     <input type="text" name="username" placeholder="username">
+    <button type="submit">Search for User</button>
     </form>
 
     <br>
@@ -93,6 +94,7 @@
             }
         });
     });
+
 
     console.log($("#searchBar1"));
     $("#searchBar1").submit((e) => {
