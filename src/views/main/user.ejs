@@ -1,0 +1,62 @@
+<% include ../partials/header %>
+<div id=root>
+    <span id="username" style="font-size: 2em;"><%= username %></span>
+    <span id="followerCount">Followers: </span>
+    <span id="followingCount">Following: </span>
+
+    <div id="info"></div>
+
+</div>
+
+<button id="postBtn">Get Posts</button>
+<button id="followerBtn">Get Followers</button>
+<button id="followingBtn">Get Following</button>
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+
+<script>
+$.ajax({
+    url: '/user/' + document.getElementById(username).innerHTML,
+    type: 'GET',
+    success: (res) => {
+        document.getElementById("followerCount").innerHTML += res.user.followers;
+        document.getElementById("followingCount").innerHTML += res.user.following;
+    }
+});
+
+document.getElementById("postBtn").addEventListener("click", (e) => {
+    $.ajax({
+        url: '/user/' + document.getElementById(username).innerHTML + '/posts',
+        type: 'GET',
+        success: (res) => {
+            let items = res.users;
+            let info = document.getElementById("info");
+            while (info.hasChildNodes()) {
+                    info.removeChild(info.lastChild);
+            }
+            if (!items || items.length === 0) {
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.style.color = 'red'
+                    div.innerHTML = "No tweets found with given timestamp/limit.";
+                    info.appendChild(div);
+                    return;
+            }
+            for (let i = 0; i < items.length; i++) {
+                    console.log(items[i].content);
+                    let div = document.createElement('div');
+                    div.className = 'tweet';
+                    div.innerHTML = items[i].content + "<br>Likes: " + items[i].property.likes + "<br>Retweets: " + items[i].retweeted + "<br>Timestamp: " + items[i].timestamp;
+                    div.style.border = "10px solid blue";
+                    info.appendChild(div);
+                }
+        }
+    });
+});
+
+
+
+</script>
+
+<% include ../partials/footer %>
