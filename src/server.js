@@ -31,7 +31,8 @@ var userSchema = new mongoose.Schema({
     disable: Boolean,
     token: String,
     followers: Array,
-    following: Array
+    following: Array,
+    likes: Array
 });
 var User = usersDB.model("User", userSchema);
 
@@ -42,7 +43,11 @@ var tweetSchema = new mongoose.Schema({
     retweeted: Number,
     content: String,
     childType: String,
-    timestamp: Number
+    timestamp: Number,
+    childType: String,
+    parent: String,
+    media: Array,
+    likes: Number
 });
 var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
@@ -109,7 +114,7 @@ app.get('/', (req, res) => {
 app.get('/info', (req, res) => {
     let username = req.query.username;
     if (!username) res.send("ERROR");
-    else res.render("main/user.ejs", {username})
+    else res.render("main/user.ejs", { username })
 });
 
 app.get('/adduser', (req, res) => {
@@ -235,6 +240,11 @@ app.post("/verify", (req, res) => {
 app.post('/additem', (req, res) => {
     let content = req.body.content;
     let childType = req.body.childType;
+    let parent = req.body.parent;
+    let media = req.body.media;
+    if (!parent) parent = "";
+    if (!media) media = [];
+    if (!childType) childType = null;
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie || !content) {
         if (!content) {
@@ -257,7 +267,9 @@ app.post('/additem', (req, res) => {
                     property: { likes: 0 },
                     retweeted: 0,
                     content: content,
-                    timestamp: Date.now() / 1000
+                    timestamp: Date.now() / 1000,
+                    parent,
+                    media
                 });
 
                 tweet.save((err, tweet) => {
@@ -293,7 +305,10 @@ app.get('/item/:id', (req, res) => {
                         property: tweet.property,
                         retweeted: tweet.retweeted,
                         content: tweet.content,
-                        timestamp: tweet.timestamp
+                        timestamp: tweet.timestamp,
+                        childType: tweet.childType,
+                        parent: tweet.parent,
+                        media: tweet.media
                     },
                 });
             }
@@ -516,7 +531,7 @@ app.post('/follow', (req, res) => {
                             let followers = user1.followers;
                             console.log("Following: " + following);
                             console.log("Wants to follow: " + user1.username);
-                            console.log("Their followers: " + followers);                            
+                            console.log("Their followers: " + followers);
                             if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
                                 if (follow) {
                                     res.json({ status: "error", error: "already following user" });
@@ -552,6 +567,45 @@ app.post('/follow', (req, res) => {
                         }
                     });
                 }
+            }
+        });
+    }
+});
+
+app.post('/item/:id/like', (req, res) => {
+    let id = req.params.id;
+    let like = req.body.like;
+    if (like === "false") like = false;
+    if (like != true && like != false) like = true;
+    let cookie = req.cookies.jwt;
+    if (typeof cookie === undefined || !cookie) {
+        res.json({ status: "error", error: "invalid cookie" });
+        console.log("invalid cookie " + cookie);
+    }
+    else {
+        User.findOne({ token: cookie }, (err, user) => {
+            if (err || !user) {
+                res.json({ status: "error", error: "error finding user" });
+            } else {
+                Tweet.findOne({ id }, (err, tweet) => {
+                    if (err || !tweet) {
+                        res.json({ status: "error", error: "error finding tweet" });
+                    } else {
+                        Tweet.update(tweet, {likes:tweet.likes+1}, (err) => {
+                            if (err) res.json({status:"error", error:"error incrementing like count of tweet"});
+                            else {
+                                let likes = user.likes;
+                                likes.push(id);
+                                User.update(user, {likes}, (err) => {
+                                    if (err) res.json({status:"error", error:"error adding tweet to users liked tweets"});
+                                    else {
+                                        res.json({status:"OK", message:"Liked tweet successfully"});
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
             }
         });
     }
