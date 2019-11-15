@@ -60,8 +60,8 @@
     <br>
 
     <form class="homeForm" id="userSearch" method="GET" action="/info">
-    <input type="text" name="username" placeholder="username">
-    <button type="submit">Search for User</button>
+        <input type="text" name="username" placeholder="username">
+        <button type="submit">Search for User</button>
     </form>
 
     <br>
@@ -75,6 +75,12 @@
         <button type="submit">Search</button>
     </form>
 
+    <br>
+
+    <form method="POST" action="/addmedia" enctype="multipart/form-data">
+        <input type="file" name="content">
+        <input type="submit" />
+    </form>
     <ul id="posts"></ul>
 
 </div>
@@ -102,7 +108,7 @@
         let dat = $("#searchBar1").serializeArray();
         console.log(dat);
         if (dat.length > 4 && dat[4].value === 'on') dat[4].value = false;
-        else dat.push({name:"following", value:true});
+        else dat.push({ name: "following", value: true });
         console.log();
         $.ajax({
             type: 'POST',
@@ -179,8 +185,8 @@
             data: $("#deleteTweet").serialize(),
             dataType: 'json',
             success: (response) => {
-               console.log(response);
-               console.log("DELETED TEWIEJOTWEOITWIEJTIIOJ!!I!IOJ!OJ!IO!JIJOI!J");
+                console.log(response);
+                console.log("DELETED TEWIEJOTWEOITWIEJTIIOJ!!I!IOJ!OJ!IO!JIJOI!J");
             }
         });
     });
