@@ -705,7 +705,7 @@ app.get('/home', (req, res) => {
 
             } else {
                 let username = user.username;
-                res.render("main/home.ejs", { username });
+                res.json({status:"OK", username})
             }
         });
     }
