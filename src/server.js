@@ -359,7 +359,12 @@ app.delete('/item/:id', (req, res) => {
                                     if (err) {
                                         res.status(400).json({ status: "error", error: "unable to delete tweet " + id });
                                     } else {
-                                        res.status(200).json({ status: "OK", message: "successfully deleted tweet" }); // success
+                                        const query = 'DELETE FROM media WHERE filename=?';
+                                        tweet.media.forEach((filename) => {
+                                            const params =  [filename];
+                                            cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Deleted " + params[0]));
+                                        });
+                                        res.status(200).json({ status: "OK", message: "successfully deleted tweet and associated media files" }); // success 
                                     }
                                 });
                             }
@@ -638,10 +643,10 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
                 res.json({ status: "error", error: "error finding user" });
             } else {
                 const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
-                let filename = user.username + "_" + Date.now();
+                let filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
                 let contents = fs.readFileSync(req.file.path);
                 const params = [filename, contents, req.file.path];
-
+                console.log(req.file);
                 cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Uploaded " + params[0]));
                 res.json({status:"OK", id: filename});
             }
