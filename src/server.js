@@ -89,19 +89,6 @@ esClient.ping({ requestTimeout: 10000 }, (err) => {
     }
 });
 
-
-// esClient.indices.create({
-//     index: 'tweets'
-// }, (err, resp, status) => {
-//     if (err) {
-//         console.log(err);
-//     } else {
-//         console.log("create es ", resp);
-//     }
-// })
-
-
-
 /**
  * SETUP COOKIES/SESSIONS STUFF
  */
@@ -326,6 +313,7 @@ app.post('/additem', (req, res) => {
                     retweeted: 0,
                     content: content,
                     timestamp: Date.now() / 1000,
+                    childType,
                     parent,
                     media
                 });
@@ -348,8 +336,26 @@ app.post('/additem', (req, res) => {
                     console.log("response is {status: OK, id: " + uniqueID + " }.");
                 });
 
+
+                let e = {
+                    id: uniqueID,
+                    username: user.username,
+                    property: { likes: 0 },
+                    retweeted: 0,
+                    content: content,
+                    timestamp: Date.now() / 1000,
+                    childType,
+                    parent,
+                    media
+                };
+
+                esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
+                    console.log(resp);
+                });
+
             }
         });
+
     }
 });
 
@@ -417,6 +423,9 @@ app.delete('/item/:id', (req, res) => {
                                         res.status(200).json({ status: "OK", message: "successfully deleted tweet and associated media files" }); // success 
                                     }
                                 });
+                                esClient.delete({ index: 'tweets', id, type: 'tweet' }, (err, resp, status) => {
+                                    console.log(resp);
+                                });
                             }
                         }
                     });
@@ -442,40 +451,85 @@ app.post('/search', (req, res) => {
     let items = [];
     console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
     let query = {
-        timestamp: { $lt: timestamp },
-    }
-    if (qe && qe.trim() != "") {
-        let sp = qe.split(" ");
-        qe = "";
-        for (char of sp) {
-            qe += char + "|"
+        bool: {
+            must: [],
+            filter: [
+                { range: { timestamp: { lte: timestamp } } }
+            ]
         }
-        if (qe.length > 0) qe = qe.substring(0, qe.length - 1);
-        query.content = { $regex: new RegExp(qe, "i") };
     }
-    if (username) query.username = username;
+
+    // if (qe && qe.trim() != "") {
+    //     // let sp = qe.split(" ");
+    //     // qe = "";
+    //     // for (char of sp) {
+    //     //     qe += char + "|"
+    //     // }
+    //     // if (qe.length > 0) qe = qe.substring(0, qe.length - 1);
+    //     // query.content = { $regex: new RegExp(qe, "i") };
+    //     query.must[0].match = {content:qe};
+    // }
+    if (qe) {
+        query.bool.must.push({ match: { content: qe } });
+    } else {
+        query.bool.must.push({ match_all: {} });
+    }
+    if (username) {
+        query.bool.must.push({ match: { username } })
+    }
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
-
+    console.log(query);
     // const util = require('util');
     // console.log(util.inspect(query, false, null, true /* enable colors */))
 
     User.findOne({ token: cookie }, (err, loggedInUser) => {
-        Tweet.find(query).limit(limit).then(async (tweets) => {
-            for (tweet of tweets) {
-                let userQuery = User.findOne({ username: tweet.username });
-                let user = await userQuery.exec();
-                if ((loggedInUser && (user.followers.includes(loggedInUser.username) || !following)) || !loggedInUser) {
-                    items.push(tweet);
-                    // console.log(tweet);
-                }
+        esClient.search({
+            index: 'tweets',
+            type: 'tweet',
+            body: { query }
+        }, (err, resp, status) => {
+            if (err) {
+                console.log(query);
+                // console.log(err);
+                res.json({ status: "error", error: err });
+            } else {
+                // console.log("--- Response ---");
+                // console.log(resp);
+                // console.log("--- Hits ---");
+                let items = [];
+                resp.hits.hits.forEach((hit) => {
+                    // console.log(hit);
+                    items.push({
+                        id: hit._source.id,
+                        username: hit._source.username,
+                        property: hit._source.property,
+                        retweeted: hit._source.retweeted,
+                        content: hit._source.content,
+                        timestamp: hit._source.timestamp,
+                        childType: hit._source.childType,
+                        parent: hit._source.parent,
+                        media: hit._source.media
+                    });
+                });
+                res.json({ status: "OK", items });
             }
-            console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
-            res.json({
-                status: "OK",
-                items: items
-            });
         });
+        // Tweet.find(query).limit(limit).then(async (tweets) => {
+        //     for (tweet of tweets) {
+        //         let userQuery = User.findOne({ username: tweet.username });
+        //         let user = await userQuery.exec();
+        //         if ((loggedInUser && (user.followers.includes(loggedInUser.username) || !following)) || !loggedInUser) {
+        //             items.push(tweet);
+        //             // console.log(tweet);
+        //         }
+        //     }
+        //     console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
+        //     res.json({
+        //         status: "OK",
+        //         items: items
+        //     });
+        // });
     });
 });
 
