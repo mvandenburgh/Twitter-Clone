@@ -694,7 +694,7 @@ app.get('/home', (req, res) => {
         res.clearCookie('jwt');
         // res.json({ status: "ERROR", message: "invalid cookie" });
         // console.log("invalid cookie");
-        res.redirect("/");
+        res.statusCode(400).json({ status: "error", error: "user not logged in" });
     }
     else {
         User.findOne({ 'token': cookie }, (err, user) => {
