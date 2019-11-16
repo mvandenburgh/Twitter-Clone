@@ -31,7 +31,7 @@ $('#signInForm').submit((e) => {
             console.log('form submitted.');
             console.log("the response is " + JSON.stringify(response));
             if (response.status === "OK") {
-                window.location.href = "/home";
+                window.location.href = "/";
             }
             else {
                 console.log("ERROR: INCORRECT U/P");

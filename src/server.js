@@ -1,3 +1,9 @@
+const cassandraIP = '192.168.122.70';
+const mongoIP = "localhost";
+const mailServerIP = "localhost";
+const elasticIP = "192.168.122.71:9200";
+
+
 /**
  * SETUP EXPRESS AND BODY-PARSER
  */
@@ -12,13 +18,11 @@ const port = 3000;
 /**
  * SETUP MAIL SERVER STUFF
  */
-const mailServerIP = "localhost";
 var nodemailer = require("nodemailer");
 
 /**
  * SETUP MONGODB STUFF
  */
-const mongoIP = "localhost";
 var mongoose = require("mongoose/");
 var usersDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "users", { useNewUrlParser: true, useUnifiedTopology: true });
 var tweetsDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "tweets", { useNewUrlParser: true, useUnifiedTopology: true });
@@ -55,7 +59,6 @@ var Tweet = tweetsDB.model("Tweet", tweetSchema);
 /**
  * SETUP CASSANDRA DB / MULTER STUFF
  */
-const cassandraIP = '192.168.122.70';
 var fs = require('fs');
 var mime = require('mime-types');
 var cassandra = require('cassandra-driver');
@@ -66,6 +69,38 @@ cassandraClient.connect((err) => {
 })
 var multer = require('multer');
 var multipart = multer({ dest: '/uploads' });
+
+
+/**
+ * SETUP ELASTICSEARCH STUFF
+ */
+const elasticsearch = require('elasticsearch');
+const esClient = new elasticsearch.Client({
+    host: elasticIP,
+    log: 'error'
+});
+
+
+esClient.ping({ requestTimeout: 10000 }, (err) => {
+    if (err) {
+        console.log(err);
+    } else {
+        console.log("Connected to elasticsearch!");
+    }
+});
+
+
+// esClient.indices.create({
+//     index: 'tweets'
+// }, (err, resp, status) => {
+//     if (err) {
+//         console.log(err);
+//     } else {
+//         console.log("create es ", resp);
+//     }
+// })
+
+
 
 /**
  * SETUP COOKIES/SESSIONS STUFF
@@ -123,7 +158,15 @@ app.get('/', (req, res) => {
         res.render("index.ejs");
     }
     else {
-        res.redirect("/home");
+        User.findOne({ token: cookie }, (err, user) => {
+            if (err || !user) {
+                res.render("index.ejs");
+            }
+            else {
+                res.render("main/home.ejs", { username: user.username });
+            }
+        })
+
     }
 });
 
@@ -152,20 +195,19 @@ app.post('/adduser', (req, res) => {
             let user = new User({ username, password, email, disable: true });
             user.save((err, user) => {
                 if (err) {
-                    // console.log("Error: " + user + " couldn't be save to DB.");
+                    console.log("Error: " + user + " couldn't be save to DB.");
                 } else {
-                    // console.log("The following user was added to the DB:\n" + user);
+                    console.log("The following user was added to the DB:\n" + user);
                 }
             });
         }
     });
-
 });
 
 app.post('/login', (req, res) => {
     let username = req.body.username;
     let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
-    // console.log("Attempting to login " + username);
+    console.log("Attempting to login " + username);
     if (!username || !password) {
         console.log("u or p invalid");
         res.json({ status: "error", error: "Username and/or password is invalid" });
@@ -187,7 +229,7 @@ app.post('/login', (req, res) => {
                             if (err) {
                                 console.log(user + " failed to generate cookie...");
                             } else {
-                                // console.log("Generated cookie " + token + " for user " + user);
+                                console.log("Generated cookie " + token + " for user " + user);
                             }
                         });
                         res.cookie('jwt', token);
@@ -296,14 +338,14 @@ app.post('/additem', (req, res) => {
                         if (!parent || childType != "retweet") {
                             res.json({ status: "OK", id: uniqueID });
                         } else {
-                            Tweet.findOne({id: parent}, (err, parentTweet) => {
+                            Tweet.findOne({ id: parent }, (err, parentTweet) => {
                                 parentTweet.retweeted = parentTweet.retweeted + 1;
                                 parentTweet.save();
-                                res.json({status:"OK", message:"retweeted tweet successfully"});
+                                res.json({ status: "OK", message: "retweeted tweet successfully" });
                             });
                         }
                     }
-                    // console.log("response is {status: OK, id: " + uniqueID + " }.");
+                    console.log("response is {status: OK, id: " + uniqueID + " }.");
                 });
 
             }
@@ -396,9 +438,9 @@ app.post('/search', (req, res) => {
     if (limit > 100) limit = 100;
     if (typeof following === "undefined" || following === "true") following = true;
     else if (following === "false") following = false;
-    // console.log("following: " + following);
+    console.log("following: " + following);
     let items = [];
-    // console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
+    console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
     let query = {
         timestamp: { $lt: timestamp },
     }
@@ -428,7 +470,7 @@ app.post('/search', (req, res) => {
                     // console.log(tweet);
                 }
             }
-            // console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
+            console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
             res.json({
                 status: "OK",
                 items: items
@@ -606,7 +648,7 @@ app.post('/item/:id/like', (req, res) => {
     let like = req.body.like;
     if (like === "false") like = false;
     if (like != true && like != false) like = true;
-    let cookie = req.cookies.jwt;
+    let cookie = req.cookies.jwt; retweeting
     if (typeof cookie === undefined || !cookie) {
         res.json({ status: "error", error: "invalid cookie" });
         console.log("invalid cookie " + cookie);
