@@ -59,13 +59,13 @@ const cassandraIP = '192.168.122.70';
 var fs = require('fs');
 var mime = require('mime-types');
 var cassandra = require('cassandra-driver');
-var cassandraClient = new cassandra.Client({contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3'});
+var cassandraClient = new cassandra.Client({ contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3' });
 cassandraClient.connect((err) => {
     if (err) console.log(err);
     else console.log("Connected to cassandra db successfully!");
 })
 var multer = require('multer');
-var multipart = multer({dest: '/uploads'});
+var multipart = multer({ dest: '/uploads' });
 
 /**
  * SETUP COOKIES/SESSIONS STUFF
@@ -291,10 +291,18 @@ app.post('/additem', (req, res) => {
                 tweet.save((err, tweet) => {
                     if (err) {
                         console.log("Error: failed to post tweet  " + tweet);
+                        res.json({ status: "error", error: "failed to post tweet" });
                     } else {
-                        // console.log(tweet + " posted successfully.");
+                        if (!parent || childType != "retweet") {
+                            res.json({ status: "OK", id: uniqueID });
+                        } else {
+                            Tweet.findOne({id: parent}, (err, parentTweet) => {
+                                parentTweet.retweeted = parentTweet.retweeted + 1;
+                                parentTweet.save();
+                                res.json({status:"OK", message:"retweeted tweet successfully"});
+                            });
+                        }
                     }
-                    res.json({ status: "OK", id: uniqueID });
                     // console.log("response is {status: OK, id: " + uniqueID + " }.");
                 });
 
@@ -361,7 +369,7 @@ app.delete('/item/:id', (req, res) => {
                                     } else {
                                         const query = 'DELETE FROM media WHERE filename=?';
                                         tweet.media.forEach((filename) => {
-                                            const params =  [filename];
+                                            const params = [filename];
                                             cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Deleted " + params[0]));
                                         });
                                         res.status(200).json({ status: "OK", message: "successfully deleted tweet and associated media files" }); // success 
@@ -612,15 +620,15 @@ app.post('/item/:id/like', (req, res) => {
                     if (err || !tweet) {
                         res.json({ status: "error", error: "error finding tweet" });
                     } else {
-                        Tweet.update(tweet, {likes:tweet.likes+1}, (err) => {
-                            if (err) res.json({status:"error", error:"error incrementing like count of tweet"});
+                        Tweet.update(tweet, { likes: tweet.likes + 1 }, (err) => {
+                            if (err) res.json({ status: "error", error: "error incrementing like count of tweet" });
                             else {
                                 let likes = user.likes;
                                 likes.push(id);
-                                User.update(user, {likes}, (err) => {
-                                    if (err) res.json({status:"error", error:"error adding tweet to users liked tweets"});
+                                User.update(user, { likes }, (err) => {
+                                    if (err) res.json({ status: "error", error: "error adding tweet to users liked tweets" });
                                     else {
-                                        res.json({status:"OK", message:"Liked tweet successfully"});
+                                        res.json({ status: "OK", message: "Liked tweet successfully" });
                                     }
                                 });
                             }
@@ -648,7 +656,7 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
                 const params = [filename, contents, req.file.path];
                 console.log(req.file);
                 cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Uploaded " + params[0]));
-                res.json({status:"OK", id: filename});
+                res.json({ status: "OK", id: filename });
             }
         });
     }
@@ -657,7 +665,7 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
 app.get('/media/:id', multipart.single('content'), (req, res) => {
     const query = 'SELECT path FROM media WHERE filename=?';
     const params = [req.params.id];
-    cassandraClient.execute(query, params, {prepare: true}, (err, result) => {
+    cassandraClient.execute(query, params, { prepare: true }, (err, result) => {
         if (result.rows.length > 0) {
             let image = result.rows[0].path;
             res.writeHead(200, {
@@ -705,7 +713,7 @@ app.get('/home', (req, res) => {
 
             } else {
                 let username = user.username;
-                res.json({status:"OK", username})
+                res.json({ status: "OK", username })
             }
         });
     }
