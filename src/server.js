@@ -332,15 +332,17 @@ app.post('/additem', (req, res) => {
                         } else {
                             Tweet.findOne({ id: parent }, (err, parentTweet) => {
                                 parentTweet.retweeted = parentTweet.retweeted + 1;
-                                parentTweet.save();
-                                res.json({ status: "OK", message: "retweeted tweet successfully" });
-                                esClient.update({
-                                    index: "tweets", parent, body: {
-                                        doc: {
-                                            retweeted: parentTweet.retweeted+1
+                                parentTweet.save().then(() => {
+                                    esClient.update({
+                                        index: "tweets", id: parent, body: {
+                                            doc: {
+                                                retweeted: parentTweet.retweeted
+                                            }
                                         }
-                                    }
+                                    });
                                 });
+                                res.json({ status: "OK", message: "retweeted tweet successfully" });
+                                
                             });
                         }
                     }
