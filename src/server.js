@@ -324,7 +324,7 @@ app.post('/additem', (req, res) => {
                     let usedElsewhere = false;
                     console.log("media: ")
                     console.log(media)
-                    Tweet.find({hasMedia:true}, (err, tweets) => {
+                    Tweet.find({ hasMedia: true }, (err, tweets) => {
                         console.log(tweets);
                         for (const tweet of tweets) {
                             console.log("current tweet media;")
@@ -378,7 +378,7 @@ app.post('/additem', (req, res) => {
                                                     }
                                                 });
                                             });
-                                            res.json({ status: "OK", message: "retweeted tweet successfully" });
+                                            res.json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
 
                                         });
                                     }
@@ -526,7 +526,7 @@ app.post('/search', (req, res) => {
             term: { hasMedia: true }
         });
     }
-    if (qe) {
+    if (qe && qe.trim().length > 0) {
         query.bool.must.push({ match: { content: qe } });
     } else {
         query.bool.must.push({ match_all: {} });
@@ -762,40 +762,56 @@ app.post('/item/:id/like', (req, res) => {
             if (err || !user) {
                 res.json({ status: "error", error: "error finding user" });
             } else {
-                Tweet.findOne({ id }, (err, tweet) => {
-                    if (err || !tweet) {
-                        res.json({ status: "error", error: "error finding tweet" });
-                    } else {
-                        let property = tweet.property;
-                        if (like) {
-                            property.likes = property.likes + 1;
-                        }
-                        else {
-                            // property.likes = property.likes - 1;
-                        }
-                        let retweets = tweet.retweeted;
-                        Tweet.update(tweet, { property }, (err) => {
-                            if (err) res.json({ status: "error", error: "error incrementing like count of tweet" });
+                if (user.likes.includes(id) && like) {
+                    res.json({ status: "error", error: "already liked tweet" });
+                } else if (!user.likes.includes(id) && !like) {
+                    res.json({ status: "error", error: "can't unlike a tweet you haven't liked." })
+                }
+                else {
+                    Tweet.findOne({ id }, (err, tweet) => {
+                        if (err || !tweet) {
+                            res.json({ status: "error", error: "error finding tweet" });
+                        } else {
+                            let property = tweet.property;
+                            if (like) {
+                                property.likes = property.likes + 1;
+                            }
                             else {
-                                let likes = user.likes;
-                                likes.push(id);
-                                User.update(user, { likes }, (err) => {
-                                    if (err) res.json({ status: "error", error: "error adding tweet to users liked tweets" });
-                                    else {
-                                        res.json({ status: "OK", message: "Liked tweet successfully" });
+                                property.likes = property.likes - 1;
+                            }
+                            let retweets = tweet.retweeted;
+                            tweet.property = property;
+                            console.log(tweet.property);
+                            Tweet.updateOne({id:tweet.id}, {property}, (err, tweet) => {
+                                if (err) res.json({ status: "error", error: "error incrementing like count of tweet" });
+                                else {
+                                    console.log(tweet);
+                                    let likes = user.likes;
+                                    if (like) {
+                                        likes.push(id);
                                     }
-                                });
-                            }
-                        });
-                        esClient.update({
-                            index: "tweets", id, body: {
-                                doc: {
-                                    property, interest: retweets + property.likes
+                                    else {
+                                        likes.splice(likes.indexOf(id), 1);
+                                    }
+                                    User.updateOne({username: user.username}, {likes}, (err) => {
+                                        if (err) res.json({ status: "error", error: "error adding tweet to users liked tweets" });
+                                        else {
+                                            res.json({ status: "OK", message: "Liked/unliked tweet successfully" });
+                                        }
+                                    });
                                 }
-                            }
-                        });
-                    }
-                });
+                            });
+                            
+                            esClient.update({
+                                index: "tweets", id, body: {
+                                    doc: {
+                                        property, interest: retweets + property.likes
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
             }
         });
     }
