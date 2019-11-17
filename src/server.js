@@ -320,6 +320,10 @@ app.post('/additem', (req, res) => {
                     res.json({ status: "error", error: "media file not owned by user logged in." });
                 }
                 else {
+                    let hasMedia = false;
+                    if (media && media.length > 0) {
+                        hasMedia = true;
+                    }
                     let uniqueID = uuidv1().substring(0, 8);
                     let tweet = new Tweet({
                         id: uniqueID,
@@ -331,6 +335,7 @@ app.post('/additem', (req, res) => {
                         childType,
                         parent,
                         media,
+                        hasMedia,
                         interest: 0
                     });
 
@@ -372,6 +377,7 @@ app.post('/additem', (req, res) => {
                         childType,
                         parent,
                         media,
+                        hasMedia,
                         interest: 0
                     };
 
@@ -473,6 +479,12 @@ app.post('/search', (req, res) => {
     let username = req.body.username;
     let following = req.body.following;
     let rank = req.body.rank;
+    let parent = req.body.parent;
+    let replies = req.body.replies;
+    let hasMedia = req.body.hasMedia;
+    if (replies === "false") {
+        replies = false
+    } else replies = true;
     if (!rank) rank = "interest";
     if (!timestamp) timestamp = Date.now() / 1000;
     if (!limit) limit = 25;
@@ -489,6 +501,11 @@ app.post('/search', (req, res) => {
                 { range: { timestamp: { lte: timestamp } } }
             ]
         }
+    }
+    if (hasMedia) {
+        query.bool.must.push({
+            term: { hasMedia: true }
+        });
     }
     if (qe) {
         query.bool.must.push({ match: { content: qe } });
