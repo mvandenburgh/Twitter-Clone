@@ -320,73 +320,85 @@ app.post('/additem', (req, res) => {
                     res.json({ status: "error", error: "media file not owned by user logged in." });
                 }
                 else {
-                    let hasMedia = false;
-                    if (media && media.length > 0) {
-                        hasMedia = true;
-                    }
-                    let uniqueID = uuidv1().substring(0, 8);
-                    let tweet = new Tweet({
-                        id: uniqueID,
-                        username: user.username,
-                        property: { likes: 0 },
-                        retweeted: 0,
-                        content: content,
-                        timestamp: Date.now() / 1000,
-                        childType,
-                        parent,
-                        media,
-                        hasMedia,
-                        interest: 0
-                    });
-
-                    tweet.save((err, tweet) => {
-                        if (err) {
-                            console.log("Error: failed to post tweet  " + tweet);
-                            res.json({ status: "error", error: "failed to post tweet" });
-                        } else {
-                            if (!parent || childType != "retweet") {
-                                res.json({ status: "OK", id: uniqueID });
-                            } else {
-                                Tweet.findOne({ id: parent }, (err, parentTweet) => {
-                                    parentTweet.retweeted = parentTweet.retweeted + 1;
-                                    parentTweet.save().then(() => {
-                                        esClient.update({
-                                            index: "tweets", id: parent, body: {
-                                                doc: {
-                                                    retweeted: parentTweet.retweeted
-                                                }
-                                            }
-                                        });
-                                    });
-                                    res.json({ status: "OK", message: "retweeted tweet successfully" });
-
-                                });
+                    let usedElsewhere = false;
+                    Tweet.find({ hasMedia: true }, (err, tweets) => {
+                        tweets.forEach((tweet) => {
+                            for (const id of media) {
+                                if (tweet.media.includes(id) {
+                                    usedElsewhere = true;
+                                    break;
+                                }
                             }
+                        });
+                    });
+                    if (usedElsewhere) {
+                        res.json({ status: "error", error: "media file is used elsewhere." });
+                    }
+                    else {
+                        let hasMedia = false;
+                        if (media && media.length > 0) {
+                            hasMedia = true;
                         }
-                        console.log("response is {status: OK, id: " + uniqueID + " }.");
-                    });
+                        let uniqueID = uuidv1().substring(0, 8);
+                        let tweet = new Tweet({
+                            id: uniqueID,
+                            username: user.username,
+                            property: { likes: 0 },
+                            retweeted: 0,
+                            content: content,
+                            timestamp: Date.now() / 1000,
+                            childType,
+                            parent,
+                            media,
+                            hasMedia,
+                            interest: 0
+                        });
+
+                        tweet.save((err, tweet) => {
+                            if (err) {
+                                console.log("Error: failed to post tweet  " + tweet);
+                                res.json({ status: "error", error: "failed to post tweet" });
+                            } else {
+                                if (!parent || childType != "retweet") {
+                                    res.json({ status: "OK", id: uniqueID });
+                                } else {
+                                    Tweet.findOne({ id: parent }, (err, parentTweet) => {
+                                        parentTweet.retweeted = parentTweet.retweeted + 1;
+                                        parentTweet.save().then(() => {
+                                            esClient.update({
+                                                index: "tweets", id: parent, body: {
+                                                    doc: {
+                                                        retweeted: parentTweet.retweeted
+                                                    }
+                                                }
+                                            });
+                                        });
+                                        res.json({ status: "OK", message: "retweeted tweet successfully" });
+
+                                    });
+                                }
+                            }
+                            console.log("response is {status: OK, id: " + uniqueID + " }.");
+                        });
 
 
-                    let e = {
-                        id: uniqueID,
-                        username: user.username,
-                        property: { likes: 0 },
-                        retweeted: 0,
-                        content: content,
-                        timestamp: Date.now() / 1000,
-                        childType,
-                        parent,
-                        media,
-                        hasMedia,
-                        interest: 0
-                    };
+                        let e = {
+                            id: uniqueID,
+                            username: user.username,
+                            property: { likes: 0 },
+                            retweeted: 0,
+                            content: content,
+                            timestamp: Date.now() / 1000,
+                            childType,
+                            parent,
+                            media,
+                            hasMedia,
+                            interest: 0
+                        };
 
-                    esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
-                        console.log(resp);
-                    });
-
-                    if (childType == "retweet" && parent) {
-
+                        esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
+                            console.log(resp);
+                        });
                     }
                 }
             }
