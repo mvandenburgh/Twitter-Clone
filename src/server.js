@@ -50,7 +50,7 @@ var tweetSchema = new mongoose.Schema({
     childType: String,
     parent: String,
     media: Array,
-    likes: Number
+    // likes: Number
 });
 var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
@@ -80,13 +80,16 @@ const esClient = new elasticsearch.Client({
     log: 'error'
 });
 
-
 esClient.ping({ requestTimeout: 10000 }, (err) => {
     if (err) {
         console.log(err);
     } else {
         console.log("Connected to elasticsearch!");
     }
+});
+
+esClient.indices.create({
+    index: 'tweets'
 });
 
 /**
@@ -315,7 +318,8 @@ app.post('/additem', (req, res) => {
                     timestamp: Date.now() / 1000,
                     childType,
                     parent,
-                    media
+                    media,
+                    interest: 0
                 });
 
                 tweet.save((err, tweet) => {
@@ -330,6 +334,13 @@ app.post('/additem', (req, res) => {
                                 parentTweet.retweeted = parentTweet.retweeted + 1;
                                 parentTweet.save();
                                 res.json({ status: "OK", message: "retweeted tweet successfully" });
+                                esClient.update({
+                                    index: "tweets", parent, body: {
+                                        doc: {
+                                            retweeted: parentTweet.retweeted+1
+                                        }
+                                    }
+                                });
                             });
                         }
                     }
@@ -346,12 +357,17 @@ app.post('/additem', (req, res) => {
                     timestamp: Date.now() / 1000,
                     childType,
                     parent,
-                    media
+                    media,
+                    interest: 0
                 };
 
                 esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
                     console.log(resp);
                 });
+
+                if (childType == "retweet" && parent) {
+                    
+                }
 
             }
         });
@@ -442,6 +458,8 @@ app.post('/search', (req, res) => {
     let qe = req.body.q;
     let username = req.body.username;
     let following = req.body.following;
+    let rank = req.body.rank;
+    if (!rank) rank = "interest";
     if (!timestamp) timestamp = Date.now() / 1000;
     if (!limit) limit = 25;
     if (limit > 100) limit = 100;
@@ -458,17 +476,6 @@ app.post('/search', (req, res) => {
             ]
         }
     }
-
-    // if (qe && qe.trim() != "") {
-    //     // let sp = qe.split(" ");
-    //     // qe = "";
-    //     // for (char of sp) {
-    //     //     qe += char + "|"
-    //     // }
-    //     // if (qe.length > 0) qe = qe.substring(0, qe.length - 1);
-    //     // query.content = { $regex: new RegExp(qe, "i") };
-    //     query.must[0].match = {content:qe};
-    // }
     if (qe) {
         query.bool.must.push({ match: { content: qe } });
     } else {
@@ -480,6 +487,18 @@ app.post('/search', (req, res) => {
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
     console.log(query);
+
+    let sort = [];
+    if (rank === "time") {
+        sort = [
+            { timestamp: { order: "desc" } }
+        ]
+    } else {
+        sort = [
+            // { }
+        ]
+    }
+
     // const util = require('util');
     // console.log(util.inspect(query, false, null, true /* enable colors */))
 
@@ -487,19 +506,15 @@ app.post('/search', (req, res) => {
         esClient.search({
             index: 'tweets',
             type: 'tweet',
-            body: { query }
+            body: { sort, query }
         }, (err, resp, status) => {
             if (err) {
                 console.log(query);
                 // console.log(err);
                 res.json({ status: "error", error: err });
             } else {
-                // console.log("--- Response ---");
-                // console.log(resp);
-                // console.log("--- Hits ---");
                 let items = [];
                 resp.hits.hits.forEach((hit) => {
-                    // console.log(hit);
                     items.push({
                         id: hit._source.id,
                         username: hit._source.username,
@@ -515,21 +530,6 @@ app.post('/search', (req, res) => {
                 res.json({ status: "OK", items });
             }
         });
-        // Tweet.find(query).limit(limit).then(async (tweets) => {
-        //     for (tweet of tweets) {
-        //         let userQuery = User.findOne({ username: tweet.username });
-        //         let user = await userQuery.exec();
-        //         if ((loggedInUser && (user.followers.includes(loggedInUser.username) || !following)) || !loggedInUser) {
-        //             items.push(tweet);
-        //             // console.log(tweet);
-        //         }
-        //     }
-        //     console.log("RESPONSE: {status: 'OK', items: " + items + "\n}");
-        //     res.json({
-        //         status: "OK",
-        //         items: items
-        //     });
-        // });
     });
 });
 
@@ -702,7 +702,7 @@ app.post('/item/:id/like', (req, res) => {
     let like = req.body.like;
     if (like === "false") like = false;
     if (like != true && like != false) like = true;
-    let cookie = req.cookies.jwt; retweeting
+    let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
         res.json({ status: "error", error: "invalid cookie" });
         console.log("invalid cookie " + cookie);
@@ -716,7 +716,15 @@ app.post('/item/:id/like', (req, res) => {
                     if (err || !tweet) {
                         res.json({ status: "error", error: "error finding tweet" });
                     } else {
-                        Tweet.update(tweet, { likes: tweet.likes + 1 }, (err) => {
+                        let property = tweet.property;
+                        if (like) {
+                            property.likes = property.likes + 1;
+                        }
+                        else {
+                            // property.likes = property.likes - 1;
+                        }
+                        let retweets = tweet.retweeted;
+                        Tweet.update(tweet, { property }, (err) => {
                             if (err) res.json({ status: "error", error: "error incrementing like count of tweet" });
                             else {
                                 let likes = user.likes;
@@ -727,6 +735,13 @@ app.post('/item/:id/like', (req, res) => {
                                         res.json({ status: "OK", message: "Liked tweet successfully" });
                                     }
                                 });
+                            }
+                        });
+                        esClient.update({
+                            index: "tweets", id, body: {
+                                doc: {
+                                    property, interest: retweets+property.likes
+                                }
                             }
                         });
                     }
@@ -780,7 +795,12 @@ app.get('/media/:id', multipart.single('content'), (req, res) => {
 app.post('/reset', (req, res) => {
     User.deleteMany({}, (err) => {
         Tweet.deleteMany({}, (err1) => {
-            res.json({ status: "OK" });
+            esClient.indices.delete({
+                index: '_all'
+            }, (err, resp) => {
+                console.log("Mongo/Elastic cleared");
+                res.json({ status: "OK", message: "mongo/elasticsearch cleared" });
+            });
         });
     });
 
@@ -813,23 +833,6 @@ app.get('/home', (req, res) => {
             }
         });
     }
-});
-
-
-app.post("/reset", (req, res) => {
-    Tweet.remove({}, function (err) {
-        if (err) res.json({ status: "error", error: "failed to clear tweet collection" });
-        else {
-            console.log('Tweet collection removed');
-            User.remove({}, function (err) {
-                if (err) res.json({ status: "error", error: "failed to clear user collection" });
-                else {
-                    console.log('User collection removed');
-                    res.json({ status: "OK" });
-                }
-            });
-        }
-    });
 });
 
 app.listen(port, () => {
