@@ -506,11 +506,11 @@ app.post('/search', (req, res) => {
     if (rank === "time") {
         sort = [
             { timestamp: { order: "desc" } }
-        ]
+        ];
     } else {
         sort = [
-            // { }
-        ]
+            { interest: { order: "desc" } }
+        ];
     }
 
     // const util = require('util');
