@@ -492,6 +492,7 @@ app.delete('/item/:id', (req, res) => {
 });
 
 app.post('/search', (req, res) => {
+    console.log(req);
     let timestamp = Number(req.body.timestamp);
     let limit = Number(req.body.limit);
     let qe = req.body.q;
@@ -549,6 +550,7 @@ app.post('/search', (req, res) => {
         ];
     }
 
+
     // const util = require('util');
     // console.log(util.inspect(query, false, null, true /* enable colors */))
 
@@ -556,7 +558,7 @@ app.post('/search', (req, res) => {
         esClient.search({
             index: 'tweets',
             type: 'tweet',
-            body: { sort, query }
+            body: { size: limit, sort, query }
         }, (err, resp, status) => {
             if (err) {
                 console.log(query);
@@ -864,8 +866,13 @@ app.post('/reset', (req, res) => {
             esClient.indices.delete({
                 index: '_all'
             }, (err, resp) => {
-                console.log("Mongo/Elastic cleared");
-                res.json({ status: "OK", message: "mongo/elasticsearch cleared" });
+                const query = 'TRUNCATE m3.media;';
+                const params = [];
+                cassandraClient.execute(query, params, { prepare: true }).then(()=>{
+                    console.log("Mongo cassandra and elastic cleared");
+                    res.json({ status: "OK", message: "mongodb/cassandra/elasticsearch cleared" });
+                });
+                
             });
         });
     });
