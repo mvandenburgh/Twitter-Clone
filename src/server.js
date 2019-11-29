@@ -168,12 +168,12 @@ app.get('/', (req, res) => {
     let cookie = req.cookies.jwt;
     console.log(cookie);
     if (typeof cookie == undefined || !cookie) {
-        res.render("index.ejs");
+        res.render("home.ejs");
     }
     else {
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
-                res.render("index.ejs");
+                res.render("home.ejs");
             }
             else {
                 res.render("main/home.ejs", { username: user.username });

@@ -48,18 +48,18 @@
         <input type="text" name="parent" placeholder="parent">
         <input id="mediaIDlist" type="text" name="media"
             placeholder="media IDs (seperated by comma e.g. 1,2,3,4,... etc.">
-        <button type="submit">Post Tweet</button>
+        <button type="submit">Add item</button>
     </form>
 
     <form id="likeTweet">
         <input type="text" name="id" placeholder="post id">
         <input type="text" name="like" placeholder="'true' to like, 'false to unlike'">
-        <button type="submit">Like Tweet</button>
+        <button type="submit">Like</button>
     </form>
     <div id="likeRes"></div><br>
     <form class="homeForm" id="deleteTweet" method="DELETE" action="/additem">
         <input type="text" name="content" placeholder="tweet">
-        <button type="submit">Delete Tweet</button>
+        <button type="submit">Delete</button>
     </form>
 
     <form class="homeForm" id="searchBarId" method="GET" action="/id">
