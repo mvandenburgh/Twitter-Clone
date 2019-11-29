@@ -1,16 +1,16 @@
 const cassandraIP = '192.168.122.70';
-const mongoIP = "localhost";
+const mongoIP = "192.168.122.78";
 const mailServerIP = "localhost";
-const elasticIP = "192.168.122.71:9200";
+const elasticIP = "192.168.122.76:9200";
 
 
 /**
  * SETUP EXPRESS AND BODY-PARSER
  */
-var express = require('express')
-var app = express();
+const express = require('express')
+const app = express();
 app.use(express.static(__dirname + '/public'));
-var bodyParser = require("body-parser");
+const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 const port = 3000;
@@ -18,14 +18,21 @@ const port = 3000;
 /**
  * SETUP MAIL SERVER STUFF
  */
-var nodemailer = require("nodemailer");
+const nodemailer = require("nodemailer");
 
 /**
  * SETUP MONGODB STUFF
  */
-var mongoose = require("mongoose/");
-var usersDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "users", { useNewUrlParser: true, useUnifiedTopology: true });
-var tweetsDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "tweets", { useNewUrlParser: true, useUnifiedTopology: true });
+const mongoose = require("mongoose/");
+const usersDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "users", { useNewUrlParser: true, useUnifiedTopology: true });
+const tweetsDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "tweets", { useNewUrlParser: true, useUnifiedTopology: true });
+const mediaFilesDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "mediaFiles", { useNewUrlParser: true, useUnifiedTopology: true });
+
+console.log("F")
+
+mediaFilesDB.on("error", function (err) {
+    console.log("Mongoose connection error" + err);
+});
 
 var userSchema = new mongoose.Schema({
     username: String,
@@ -56,22 +63,26 @@ var tweetSchema = new mongoose.Schema({
 var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
 
-
 /**
  * SETUP CASSANDRA DB / MULTER STUFF
  */
 var fs = require('fs');
-// var mime = require('mime-types');
+var mime = require('mime-types');
 // var cassandra = require('cassandra-driver');
 // var cassandraClient = new cassandra.Client({ contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3' });
 // cassandraClient.connect((err) => {
 //     if (err) console.log(err);
 //     else console.log("Connected to cassandra db successfully!");
 // })
-// const multer = require('multer');
-// var multipart = multer({ dest: '/uploads' });
-var Gridfs = require('gridfs-stream');
+mediaFilesDB.on("connected", function () {
+    console.log("Mongoose connected to " + mongoIP);
+});
 
+const multer = require('multer');
+var multipart = multer({ dest: '/uploads' });
+var Gridfs = require('gridfs-stream');
+var path = require('path');
+Gridfs.mongo = mongoose.mongo;
 
 
 /**
@@ -263,7 +274,7 @@ app.post("/logout", (req, res) => {
                 user.save();
                 console.log("LOGGED OUT " + user);
                 res.clearCookie('jwt');
-                res.status(200).json({ status: "OK", message: "logged out successfully"});
+                res.status(200).json({ status: "OK", message: "logged out successfully" });
             }
         });
     }
@@ -842,35 +853,21 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
         res.status(400).json({ status: "error", error: "invalid cookie" });
         console.log("invalid cookie " + cookie);
     } else {
+        const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
-                var db = mongoose.connection.db;
-                var mongoDriver = mongoose.mongo;
-                var gfs = new Gridfs(db, mongoDriver);
-                const filename = Date.now() + "_" + user;
-                var writestream = gfs.createWriteStream({
-                    filename,
-                    mode: 'w',
-                    content_type: req.files.file.mimetype,
-                    metadata: req.body
+                // const filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
+                const filename = req.file.path.split('/')[2];
+                const streamwrite = gridfs.createWriteStream({
+                    filename
                 });
-                fs.createReadStream(req.files.file.path).pipe(writestream);
-                writestream.on('close', (file) => {
-                    User.findById(req.params.id, (err, user) => {
-                        // handle error
-                        user.file = file._id;
-                        user.save((err, updatedUser) => {
-                            // handle error
-                            res.json({ status: "OK", id: filename });
-                        });
-                    });
-                    fs.unlink(req.files.file.path, (err) => {
-                        // handle error
-                        console.log('success!')
-                    });
-                });
+                fs.createReadStream(req.file.path).pipe(streamwrite);
+                streamwrite.on("close", (file) => {
+                    console.log("wrote file " + filename + " to DB successfully.");
+                })
+                res.json({ status: "OK", id: filename, path: req.file.path });
                 // const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
                 // let filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
                 // let contents = fs.readFileSync(req.file.path);
@@ -884,21 +881,34 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
 });
 
 app.get('/media/:id', multipart.single('content'), (req, res) => {
-    const query = 'SELECT path FROM media WHERE filename=?';
-    const params = [req.params.id];
-    cassandraClient.execute(query, params, { prepare: true }, (err, result) => {
-        if (result.rows.length > 0) {
-            let image = result.rows[0].path;
-            res.writeHead(200, {
-                'Content-Type': mime.lookup(params[0])
-            });
-            let readStream = fs.createReadStream(image.toString());
-            readStream.pipe(res);
-        }
-        else {
-            res.status(400).json({ status: "error", error: "file not found" });
-        }
+    const filename = req.params.id;
+    const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
+    console.log("fetching file " + filename + "....");
+    res.writeHead(200, {
+        'Content-Type': mime.lookup(filename)
     });
+    const readstream = gridfs.createReadStream({ filename });
+    readstream.pipe(res);
+    
+    readstream.on("close", (file) => {
+        console.log("read file " + filename + " from DB successfully");
+    });
+    // })
+    // const query = 'SELECT path FROM media WHERE filename=?';
+    // const params = [req.params.id];
+    // cassandraClient.execute(query, params, { prepare: true }, (err, result) => {
+    //     if (result.rows.length > 0) {
+    //         let image = result.rows[0].path;
+    //         res.writeHead(200, {
+    //             'Content-Type': mime.lookup(params[0])
+    //         });
+    //         let readStream = fs.createReadStream(image.toString());
+    //         readStream.pipe(res);
+    //     }
+    //     else {
+    //         res.status(400).json({ status: "error", error: "file not found" });
+    //     }
+    // });
 });
 
 
