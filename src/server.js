@@ -61,15 +61,17 @@ var Tweet = tweetsDB.model("Tweet", tweetSchema);
  * SETUP CASSANDRA DB / MULTER STUFF
  */
 var fs = require('fs');
-var mime = require('mime-types');
-var cassandra = require('cassandra-driver');
-var cassandraClient = new cassandra.Client({ contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3' });
-cassandraClient.connect((err) => {
-    if (err) console.log(err);
-    else console.log("Connected to cassandra db successfully!");
-})
-var multer = require('multer');
-var multipart = multer({ dest: '/uploads' });
+// var mime = require('mime-types');
+// var cassandra = require('cassandra-driver');
+// var cassandraClient = new cassandra.Client({ contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3' });
+// cassandraClient.connect((err) => {
+//     if (err) console.log(err);
+//     else console.log("Connected to cassandra db successfully!");
+// })
+// const multer = require('multer');
+// var multipart = multer({ dest: '/uploads' });
+var Gridfs = require('gridfs-stream');
+
 
 
 /**
@@ -844,13 +846,38 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
             if (err || !user) {
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
-                const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
-                let filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
-                let contents = fs.readFileSync(req.file.path);
-                const params = [filename, contents, req.file.path];
-                console.log(req.file);
-                cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Uploaded " + params[0]));
-                res.status(200).json({ status: "OK", id: filename });
+                var db = mongoose.connection.db;
+                var mongoDriver = mongoose.mongo;
+                var gfs = new Gridfs(db, mongoDriver);
+                const filename = Date.now() + "_" + user;
+                var writestream = gfs.createWriteStream({
+                    filename,
+                    mode: 'w',
+                    content_type: req.files.file.mimetype,
+                    metadata: req.body
+                });
+                fs.createReadStream(req.files.file.path).pipe(writestream);
+                writestream.on('close', (file) => {
+                    User.findById(req.params.id, (err, user) => {
+                        // handle error
+                        user.file = file._id;
+                        user.save((err, updatedUser) => {
+                            // handle error
+                            res.json({ status: "OK", id: filename });
+                        });
+                    });
+                    fs.unlink(req.files.file.path, (err) => {
+                        // handle error
+                        console.log('success!')
+                    });
+                });
+                // const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
+                // let filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
+                // let contents = fs.readFileSync(req.file.path);
+                // const params = [filename, contents, req.file.path];
+                // console.log(req.file);
+                // cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Uploaded " + params[0]));
+                // res.json({ status: "OK", id: filename });
             }
         });
     }
