@@ -190,7 +190,7 @@ app.get('/info', (req, res) => {
 });
 
 app.get('/adduser', (req, res) => {
-    res.render("signup/signup.ejs");
+    res.render("uitest/adduser.ejs");
 });
 
 app.post('/adduser', (req, res) => {
@@ -215,6 +215,10 @@ app.post('/adduser', (req, res) => {
             });
         }
     });
+});
+
+app.get('/login', (req, res) => {
+    res.render("uitest/login.ejs");
 });
 
 app.post('/login', (req, res) => {
@@ -278,6 +282,10 @@ app.post("/logout", (req, res) => {
             }
         });
     }
+});
+
+app.get("/verify", (req, res) => {
+    res.render("uitest/verify.ejs")
 });
 
 app.post("/verify", (req, res) => {
