@@ -517,10 +517,14 @@ app.delete('/item/:id', (req, res) => {
                                     if (err) {
                                         res.status(400).json({ status: "error", error: "unable to delete tweet " + id });
                                     } else {
-                                        const query = 'DELETE FROM media WHERE filename=?';
+                                        // const query = 'DELETE FROM media WHERE filename=?';
+                                        const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
                                         tweet.media.forEach((filename) => {
-                                            const params = [filename];
-                                            cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Deleted " + params[0]));
+                                            gridfs.remove(filename, (err) => {
+                                                if (err) console.log(err);
+                                            });
+                                            // const params = [filename];
+                                            // cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Deleted " + params[0]));
                                         });
                                         res.status(200).json({ status: "OK", message: "successfully deleted tweet and associated media files" }); // success 
                                     }
