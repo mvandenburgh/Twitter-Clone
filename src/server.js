@@ -875,7 +875,7 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
                 streamwrite.on("close", (file) => {
                     console.log("wrote file " + filename + " to DB successfully.");
                 })
-                res.json({ status: "OK", id: filename, path: req.file.path });
+                res.json({ status: "OK", id: filename });
                 // const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
                 // let filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
                 // let contents = fs.readFileSync(req.file.path);
@@ -896,10 +896,26 @@ app.get('/media/:id', multipart.single('content'), (req, res) => {
         'Content-Type': mime.lookup(filename)
     });
     const readstream = gridfs.createReadStream({ filename });
-    readstream.pipe(res);
+
+    readstream.on('data', (data) => {
+        res.write(data);
+    });
+
+    // readstream.on('end', (data) => {
+        
+    // });
+
+    readstream.on("error", (err) => {
+        // console.log(err);
+        // console.log("ERJEIOREJROIJOIERJIOR");
+        res.status(400).send();
+    });
+
+    // readstream.pipe(res);
     
     readstream.on("close", (file) => {
         console.log("read file " + filename + " from DB successfully");
+        res.status(200).send();
     });
     // })
     // const query = 'SELECT path FROM media WHERE filename=?';
