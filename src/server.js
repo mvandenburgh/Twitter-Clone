@@ -449,7 +449,7 @@ app.post('/additem', (req, res) => {
                             };
 
                             esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
-                                console.log(resp);
+                                console.log("successfully indexed tweet in elasticsearch");
                             });
                         }
                     });
@@ -664,21 +664,21 @@ app.get('/user/:username/posts', (req, res) => {
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     limit = Number(limit);
-    User.findOne({ username }, (err, user) => {
-        if (err || !user) res.status(400).json({ status: "error", error: "user not found" });
+    // User.findOne({ username }, (err, user) => {
+    // if (err || !user) res.status(400).json({ status: "error", error: "user not found" });
+    // else {
+    Tweet.find({ username }).limit(limit).then((tweets) => {
+        if (!tweets || tweets.length === 0) res.status(400).json({ status: "error", error: "no tweets found" });
         else {
-            Tweet.find({ username }).limit(limit).then((tweets) => {
-                if (!tweets) res.status(400).json({ status: "error", error: "tweet not found" });
-                else {
-                    posts = [];
-                    tweets.forEach((tweet) => {
-                        posts.push(tweet.id);
-                    });
-                    res.status(200).json({ status: "OK", items: posts });
-                }
+            posts = [];
+            tweets.forEach((tweet) => {
+                posts.push(tweet.id);
             });
+            res.status(200).json({ status: "OK", items: posts });
         }
     });
+    // }
+    // });
 });
 
 app.get('/user/:username/followers', (req, res) => {
