@@ -312,20 +312,20 @@ app.post("/verify", (req, res) => {
         //         console.log("ERROR, USER NOT FOUND");
         //         res.status(400).json({ status: "error", error: "user not found" });
         //     } else {
-                // if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
-                    if (email + "_key" === key || key === "abracadabra") {
-                    User.update(user, { disable: false }, (err, affected) => {
-                        if (err || !user) {
-                            console.log(user + " not verified....");
-                            res.status(400).json({ status: "error", error: "account verification failed" });
-                        } else {
-                            // console.log(user + " account has been verified");
-                            res.status(200).json({ status: "OK" });
-                        }
-                    });
+        // if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
+        if (email + "_key" === key || key === "abracadabra") {
+            User.update({ email }, { disable: false }, (err, user) => {
+                if (err || !user) {
+                    console.log(email + " not verified....");
+                    res.status(400).json({ status: "error", error: "account verification failed." });
                 } else {
-                    res.status(400).json({ status: "error", error: "invalid verifcation key" });
+                    // console.log(user + " account has been verified");
+                    res.status(200).json({ status: "OK" });
                 }
+            });
+        } else {
+            res.status(400).json({ status: "error", error: "invalid verifcation key" });
+        }
         //     }
         // });
     }
@@ -368,7 +368,7 @@ app.post('/additem', (req, res) => {
                 else {
                     let usedElsewhere = false;
                     console.log("media: ")
-                    console.log(media)
+                    // console.log(media)
                     Tweet.find({ hasMedia: true }, (err, tweets) => {
                         console.log(tweets);
                         for (const tweet of tweets) {
@@ -521,7 +521,7 @@ app.delete('/item/:id', (req, res) => {
                                         // const query = 'DELETE FROM media WHERE filename=?';
                                         const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
                                         tweet.media.forEach((filename) => {
-                                            gridfs.remove(filename, (err) => {
+                                            gridfs.remove({ filename }, (err) => {
                                                 if (err) console.log(err);
                                             });
                                             // const params = [filename];
@@ -889,7 +889,7 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
                 // const filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
-                const filename = req.file.path.split('/')[2];
+                const filename = user.username + "_" + req.file.path.split('/')[2];
                 const streamwrite = gridfs.createWriteStream({
                     filename
                 });
@@ -916,38 +916,55 @@ app.get('/media/:id', (req, res) => {
         if (err || !data) {
             const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
             console.log("fetching file " + filename + "....");
-            res.writeHead(200, {
-                'Content-Type': mime.lookup(filename)
-            });
             const readstream = gridfs.createReadStream({ filename });
 
+            readstream.on("error", (err) => {
+                console.log(filename + " error not found....");
+                if (err)
+                    res.sendStatus(404);
+                    // res.status(404).end();
+            });
+
             readstream.on('data', (data) => {
-                res.write(data);
-                memcached.set(filename, data, 30, (err) => {
-                    if (err) throw err;
-                    console.log("Successfully saved " + filename + " to cache.");
-                });
+                if (data) {
+                    res.write(data);
+                    console.log("data being sent in res...")
+                    memcached.set(filename, data, 30, (err) => {
+                        if (err) throw err;
+                        console.log("Successfully saved " + filename + " to cache.");
+                    });
+                }
             });
 
             // readstream.on('end', (data) => {
 
             // });
 
-            readstream.on("error", (err) => {
-                res.status(400).send();
-            });
+
 
             // readstream.pipe(res);
 
             readstream.on("close", (file) => {
                 console.log("read file " + filename + " from DB successfully");
                 console.log(file);
-                res.status(200).send();
+                if (file) {
+                    res.writeHead(200, {
+                        'Content-Type': mime.lookup(filename)
+                    });
+                    // res.status(200).end({ status: "OK" });
+                    res.sendStatus(200);
+                }
+
             });
         }
         else {
-            console.log("found in memcache! " + data);
-            res.send(data);
+            console.log("found in memcache!");
+            // res.writeHead(200, {
+            //     'Content-Type': mime.lookup(filename)
+            // });
+            res.write(data);
+            // res.json({status:"OK"});
+            res.sendStatus(200);
         }
     });
 
