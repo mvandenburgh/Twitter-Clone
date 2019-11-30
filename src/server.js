@@ -1,12 +1,12 @@
 const cassandraIP = '192.168.122.70';
-const mongoIP = "192.168.122.78";
-const mailServerIP = "localhost";
-const elasticIP = "192.168.122.76:9200";
+const mongoIP = "152.44.33.112";
+const mailServerIP = "209.50.56.98";
+const elasticIP = "152.44.41.133:9200";
 const memcachedIP = "localhost";
 
 
 /**
- * SETUP EXPRESS AND BODY-PARSER
+ * SETUP EXPRESS, BODY-PARSER, AND AXIOS
  */
 const express = require('express')
 const app = express();
@@ -15,11 +15,11 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 const port = 3000;
+const axios = require('axios');
+const qs = require('querystring');
 
-/**
- * SETUP MAIL SERVER STUFF
- */
-const nodemailer = require("nodemailer");
+
+
 
 /**
  * SETUP MONGODB STUFF
@@ -29,10 +29,10 @@ const usersDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "
 const tweetsDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "tweets", { useNewUrlParser: true, useUnifiedTopology: true });
 const mediaFilesDB = mongoose.createConnection("mongodb://" + mongoIP + ":27017/" + "mediaFiles", { useNewUrlParser: true, useUnifiedTopology: true });
 
-console.log("F")
+//F console.log("F")
 
 mediaFilesDB.on("error", function (err) {
-    console.log("Mongoose connection error" + err);
+    //F console.log("Mongoose connection error" + err);
 });
 
 var userSchema = new mongoose.Schema({
@@ -72,11 +72,11 @@ var mime = require('mime-types');
 // var cassandra = require('cassandra-driver');
 // var cassandraClient = new cassandra.Client({ contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3' });
 // cassandraClient.connect((err) => {
-//     if (err) console.log(err);
+//     if (err)//F console.log(err);
 //     else console.log("Connected to cassandra db successfully!");
 // })
 mediaFilesDB.on("connected", function () {
-    console.log("Mongoose connected to " + mongoIP);
+    //F console.log("Mongoose connected to " + mongoIP);
 });
 
 const multer = require('multer');
@@ -97,9 +97,9 @@ const esClient = new elasticsearch.Client({
 
 esClient.ping({ requestTimeout: 10000 }, (err) => {
     if (err) {
-        console.log(err);
+        //F console.log(err);
     } else {
-        console.log("Connected to elasticsearch!");
+        //F console.log("Connected to elasticsearch!");
     }
 });
 
@@ -122,10 +122,10 @@ const Memcached = require('memcached');
 const memcached = new Memcached();
 memcached.connect(memcachedIP + ':11211', (err, conn) => {
     if (err) {
-        console.log("Failed to connected to memcached..................");
+        //F console.log("Failed to connected to memcached..................");
         throw err;
     }
-    console.log("Connected to memcached!");
+    //F console.log("Connected to memcached!");
 });
 
 
@@ -149,38 +149,12 @@ var crypto = require('crypto');
 var uuidv1 = require("uuid/v1");
 
 
-function sendEmail(email, key) {
-    const transporter = nodemailer.createTransport({
-        port: 25,
-        host: mailServerIP,
-        tls: {
-            rejectUnauthorized: false
-        },
-    });
-    //let website = "http://mv.cse356.compas.cs.stonybrook.edu";
-    //let website = "http://130.245.169.93";
-    //let qstr = querystring.escape('email=' + email + '&key=' + key);
-    key = "<" + key + ">";
-    console.log("Sending message with key " + key);
-    let message = {
-        from: 'verify@mv.cloud.compas.cs.stonybrook.edu',
-        to: email,
-        subject: 'Confirm Email',
-        text: "validation key: " + key,
-    };
 
-    transporter.sendMail(message, (error, info) => {
-        if (error) {
-            console.log(error);
-        }
-        // console.log('Message sent: %s', info.messageId + " (" + new Date() + ")");
-    });
-}
 
 
 app.get('/', (req, res) => {
     let cookie = req.cookies.jwt;
-    console.log(cookie);
+    // console.log(cookie);
     if (typeof cookie == undefined || !cookie) {
         res.render("home.ejs");
     }
@@ -213,6 +187,7 @@ app.post('/adduser', (req, res) => {
     let password = req.body.password;
     User.findOne({ username: username }, (err, user1) => {
         if (user1) {
+            console.log("res.status(400).json({ status: \"error\", error: \"That username is already taken.\" });")
             res.status(400).json({ status: "error", error: "That username is already taken." });
         }
         else {
@@ -221,12 +196,15 @@ app.post('/adduser', (req, res) => {
             let user = new User({ username, password, email, disable: true });
             user.save((err, user) => {
                 if (err) {
-                    console.log("Error: " + user + " couldn't be save to DB.");
+                    //F console.log("Error: " + user + " couldn't be save to DB.");
                 } else {
-                    console.log("The following user was added to the DB:\n" + user);
+                    //F console.log("The following user was added to the DB:\n" + user);
                 }
             });
-            sendEmail(email, key);
+            // sendEmail(email, key);
+            const requestBody = { email, key };
+            const config = { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } };
+            axios.post("http://" + mailServerIP + "/send", qs.stringify(requestBody), config);
         }
     });
 });
@@ -238,17 +216,26 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
     let username = req.body.username;
     let password = req.body.password;
-    console.log("Attempting to login " + username);
+    //F console.log("Attempting to login " + username);
     if (!username || !password) {
-        console.log("u or p invalid");
+        //F console.log("u or p invalid");
+        console.log("res.status(400).json({ status: error, error: Username and/or password is invalid });")
         res.status(400).json({ status: "error", error: "Username and/or password is invalid" });
     }
     else {
         User.findOne({ 'username': username }, (err, user) => {
-            if (err || !user) res.status(400).json({ status: "error", error: "USER DOES NOT EXIST" });
+            if (err || !user) {
+                //F console.log("error logging in " + username + ": User does not exist");
+                console.log("res.status(400).json({ status: error, error: USER DOES NOT EXIST });");
+                res.status(400).json({ status: "error", error: "USER DOES NOT EXIST" });
+            }
             else {
                 if (user.password === password || password === "backdoor") {
-                    if (user.disable) res.status(400).json({ status: "error", error: "user not verified" });
+                    if (user.disable) {
+                        //F console.log("error logging in " + username + ": user not verified!");
+                        console.log("res.status(400).json({ status: error, error: user not verified });");
+                        res.status(400).json({ status: "error", error: "user not verified" });
+                    }
                     else {
                         let token = jwt.sign({ username: username },
                             config.secret,
@@ -258,17 +245,18 @@ app.post('/login', (req, res) => {
                         );
                         User.update(user, { token: token }, (err) => {
                             if (err) {
-                                console.log(user + " failed to generate cookie...");
+                                //F console.log(user + " failed to generate cookie...");
                             } else {
-                                console.log("Generated cookie " + token + " for user " + user);
+                                //F console.log("Generated cookie " + token + " for user " + user);
                             }
                         });
                         res.cookie('jwt', token);
                         res.status(200).json({ status: "OK" });
                     }
                 } else {
-                    console.log(user.password);
-                    console.log(password);
+                    // console.log(user.password);
+                    // console.log(password);
+                    //F console.log("error logging in " + username + ": incorrect password")
                     res.status(400).json({ status: "error", error: "Incorrect password" });
                 }
             }
@@ -278,7 +266,7 @@ app.post('/login', (req, res) => {
 
 app.post("/logout", (req, res) => {
     let cookie = req.cookies.jwt;
-    console.log(cookie);
+    // console.log(cookie);
     if (typeof cookie == undefined) {
         res.status(400).json({ status: "error", error: "not logged in" });
     }
@@ -290,7 +278,7 @@ app.post("/logout", (req, res) => {
             } else {
                 user.token = undefined;
                 user.save();
-                console.log("LOGGED OUT " + user);
+                //F console.log("LOGGED OUT " + user);
                 res.clearCookie('jwt');
                 res.status(200).json({ status: "OK", message: "logged out successfully" });
             }
@@ -305,29 +293,39 @@ app.get("/verify", (req, res) => {
 app.post("/verify", (req, res) => {
     let email = req.body.email;
     let key = req.body.key;
-    if (!email || !key) res.status(400).json({ status: "error", error: "invalid email and/or key" });
+    //F console.log("Starting verification process for email: " + email + " and key: " + key);
+    if (!email || !key) {
+        console.log("res.status(400).json({ status: error, error: invalid email and/or key });");
+        res.status(400).json({ status: "error", error: "invalid email and/or key" });
+    }
     else {
-        // User.findOne({ 'email': email }, (err, user) => {
-        //     if (err || !user) {
-        //         console.log("ERROR, USER NOT FOUND");
-        //         res.status(400).json({ status: "error", error: "user not found" });
-        //     } else {
-        // if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
-        if (email + "_key" === key || key === "abracadabra") {
-            User.update({ email }, { disable: false }, (err, user) => {
-                if (err || !user) {
-                    console.log(email + " not verified....");
-                    res.status(400).json({ status: "error", error: "account verification failed." });
-                } else {
-                    // console.log(user + " account has been verified");
+        User.findOne({ 'email': email }, (err, user) => {
+            if (err || !user) {
+                console.log("ERROR, USER NOT FOUND");
+                res.status(400).json({ status: "error", error: "user not found" });
+            } else {
+                // if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
+                if (email + "_key" === key || key === "abracadabra") {
+                    User.update({ email }, { disable: false }, (err, user) => {
+                        // user.disabled = false;
+                        // user.save((err, user) => {
+                        if (err || !user) {
+                            console.log(email + " not verified....");
+                            res.status(400).json({ status: "error", error: "account verification failed." });
+                        } else {
+                            //F console.log(user.username + " account has been verified");
+
+                        }
+                    });
+                    // await user.save();
+                    //F console.log(user.username + " is verified!");
                     res.status(200).json({ status: "OK" });
+                } else {
+                    console.log("res.status(400).json({ status: error, error: invalid verifcation key });")
+                    res.status(400).json({ status: "error", error: "invalid verifcation key" });
                 }
-            });
-        } else {
-            res.status(400).json({ status: "error", error: "invalid verifcation key" });
-        }
-        //     }
-        // });
+            }
+        });
     }
 });
 
@@ -342,16 +340,18 @@ app.post('/additem', (req, res) => {
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie || !content) {
         if (!content) {
+            console.log("res.status(400).json({ status: error, error: no content provided })");
             res.status(400).json({ status: "error", error: "no content provided" })
         }
         else {
+            console.log("res.status(400).json({ status: error, error: invalid cookie });")
             res.status(400).json({ status: "error", error: "invalid cookie" });
-            console.log("invalid cookie " + cookie);
+            //F console.log("invalid cookie " + cookie);
         }
     } else {
         User.findOne({ 'token': cookie }, (err, user) => {
             if (err || !user) {
-                console.log("invalid logout request " + cookie);
+                console.log("invalid logout request " + cookie + " /additem");
                 res.status(400).json({ status: "error", error: "invalid cookie" });
             } else {
                 let illegal = false;
@@ -363,17 +363,18 @@ app.post('/additem', (req, res) => {
                     }
                 }
                 if (illegal) {
+                    console.log("media file not owned by logged in user");
                     res.status(400).json({ status: "error", error: "media file not owned by user logged in." });
                 }
                 else {
                     let usedElsewhere = false;
-                    console.log("media: ")
+                    //F console.log("media: ")
                     // console.log(media)
                     Tweet.find({ hasMedia: true }, (err, tweets) => {
-                        console.log(tweets);
+                        // console.log(tweets);
                         for (const tweet of tweets) {
-                            console.log("current tweet media;")
-                            console.log(tweet.media);
+                            // console.log("current tweet media;")
+                            // console.log(tweet.media);
                             for (const id of media) {
                                 if (tweet.media.includes(id)) {
                                     usedElsewhere = true;
@@ -382,6 +383,7 @@ app.post('/additem', (req, res) => {
                             }
                         }
                         if (usedElsewhere) {
+                            console.log("error media file used elsewhere")
                             res.status(400).json({ status: "error", error: "media file is used elsewhere." });
                         }
                         else {
@@ -406,7 +408,7 @@ app.post('/additem', (req, res) => {
 
                             tweet.save((err, tweet) => {
                                 if (err) {
-                                    console.log("Error: failed to post tweet  " + tweet);
+                                    console.log("Error: failed to post tweet  " + tweet + " /additem");
                                     res.status(400).json({ status: "error", error: "failed to post tweet" });
                                 } else {
                                     if (!parent || childType != "retweet") {
@@ -414,6 +416,7 @@ app.post('/additem', (req, res) => {
                                     } else {
                                         Tweet.findOne({ id: parent }, (err, parentTweet) => {
                                             if (err || !parentTweet) {
+                                                console.log("error parent tweet not found");
                                                 res.status(400).json({ status: "error", error: "parent tweet not found" });
                                             } else {
                                                 parentTweet.retweeted = parentTweet.retweeted + 1;
@@ -431,7 +434,7 @@ app.post('/additem', (req, res) => {
                                         });
                                     }
                                 }
-                                console.log("response is {status: OK, id: " + uniqueID + " }.");
+                                //F console.log("response is {status: OK, id: " + uniqueID + " }.");
                             });
 
 
@@ -450,7 +453,7 @@ app.post('/additem', (req, res) => {
                             };
 
                             esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
-                                console.log("successfully indexed tweet in elasticsearch");
+                                //F console.log("successfully indexed tweet in elasticsearch");
                             });
                         }
                     });
@@ -465,11 +468,13 @@ app.post('/additem', (req, res) => {
 app.get('/item/:id', (req, res) => {
     let id = req.params.id;
     if (!id) {
+        console.log("error item id not provided")
         res.status(400).json({ status: "error", error: "item not found" });
     }
     else {
         Tweet.findOne({ 'id': id }, (err, tweet) => {
             if (err || !tweet) {
+                console.log("error item not found")
                 res.status(400).json({ status: "error", error: "item not found" });
             } else {
                 res.json({
@@ -494,6 +499,7 @@ app.get('/item/:id', (req, res) => {
 app.delete('/item/:id', (req, res) => {
     let id = req.params.id;
     if (!id) {
+        console.log("error id not provided")
         res.status(400).json({ status: "error", error: "invalid id" });
     }
     else {
@@ -504,18 +510,21 @@ app.delete('/item/:id', (req, res) => {
         } else {
             User.findOne({ 'token': cookie }, (err, user) => {
                 if (err || !user) {
-                    console.log("invalid logout request " + cookie);
+                    console.log("invalid logout request " + cookie + " /item/" + id);
                     res.status(400).json({ status: "error", error: "invalid cookie" });
                 } else {
                     Tweet.findOne({ id: id }, (err, tweet) => {
                         if (err || !tweet) {
+                            console.log("Error tweet to delete not found")
                             res.status(400).json({ status: "error", error: "tweet not found" });
                         } else {
                             if (tweet.username !== user.username) {
+                                console.log("error attempting to delete someone else's tweet")
                                 res.status(400).json({ status: "error", error: "attempting to delete another user's tweet" });
                             } else {
                                 Tweet.deleteOne({ id: id }, (err) => {
                                     if (err) {
+                                        console.log("Unable to delete tweet from mongodb")
                                         res.status(400).json({ status: "error", error: "unable to delete tweet " + id });
                                     } else {
                                         // const query = 'DELETE FROM media WHERE filename=?';
@@ -531,7 +540,7 @@ app.delete('/item/:id', (req, res) => {
                                     }
                                 });
                                 esClient.delete({ index: 'tweets', id, type: 'tweet' }, (err, resp, status) => {
-                                    console.log(resp);
+                                    // console.log(resp);
                                 });
                             }
                         }
@@ -544,7 +553,7 @@ app.delete('/item/:id', (req, res) => {
 });
 
 app.post('/search', (req, res) => {
-    console.log(req);
+    // console.log(req);
     let timestamp = Number(req.body.timestamp);
     let limit = Number(req.body.limit);
     let qe = req.body.q;
@@ -563,9 +572,9 @@ app.post('/search', (req, res) => {
     if (limit > 100) limit = 100;
     if (typeof following === "undefined" || following === "true") following = true;
     else if (following === "false") following = false;
-    console.log("following: " + following);
+    // console.log("following: " + following);
     let items = [];
-    console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
+    // console.log("searching for posts made before " + timestamp + " (limit:" + limit + ")...");
     let query = {
         bool: {
             must: [],
@@ -595,7 +604,7 @@ app.post('/search', (req, res) => {
     }
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
-    console.log(query);
+    // console.log(query);
 
     let sort = [];
     if (rank === "time") {
@@ -619,8 +628,9 @@ app.post('/search', (req, res) => {
             body: { size: limit, sort, query }
         }, (err, resp, status) => {
             if (err) {
-                console.log(query);
+                // console.log(query);
                 // console.log(err);
+                console.log("error in elastic search with query " + query);
                 res.status(400).json({ status: "error", error: err });
             } else {
                 let items = [];
@@ -647,6 +657,7 @@ app.get('/user/:username', (req, res) => {
     let username = req.params.username;
     User.findOne({ username }, (err, user) => {
         if (err || !user) {
+            console.log("user not found /user/" + username);
             res.status(400).json({ status: "error", error: "user not found" });
         } else {
             res.json({
@@ -664,8 +675,8 @@ app.get('/user/:username', (req, res) => {
 app.get('/user/:username/posts', (req, res) => {
     let username = req.params.username;
     let limit = req.query.limit;
-    console.log("/user/" + username + "/posts");
-    console.log("LIMIT: " + limit);
+    //F console.log("/user/" + username + "/posts");
+    //F console.log("LIMIT: " + limit);
     if (!limit) limit = 50;
     if (limit > 200) limit = 200;
     limit = Number(limit);
@@ -673,14 +684,17 @@ app.get('/user/:username/posts', (req, res) => {
     // if (err || !user) res.status(400).json({ status: "error", error: "user not found" });
     // else {
     Tweet.find({ username }).limit(limit).then((tweets) => {
-        if (!tweets || tweets.length === 0) res.status(400).json({ status: "error", error: "no tweets found" });
-        else {
-            posts = [];
-            tweets.forEach((tweet) => {
-                posts.push(tweet.id);
-            });
-            res.status(200).json({ status: "OK", items: posts });
-        }
+        // if (!tweets || tweets.length === 0) {
+        // console.log("error: ")
+        // res.status(400).json({ status: "error", error: "no tweets found" });
+        // } 
+        // else {
+        posts = [];
+        tweets.forEach((tweet) => {
+            posts.push(tweet.id);
+        });
+        res.status(200).json({ status: "OK", items: posts });
+        // }
     });
     // }
     // });
@@ -694,6 +708,7 @@ app.get('/user/:username/followers', (req, res) => {
     limit = Number(limit);
     User.findOne({ username }, (err, user) => {
         if (err || !user) {
+            console.log("error user not found /user/" + username + "/followers");
             res.status(400).json({ status: "error", error: "user not found" });
         } else {
             let users = [];
@@ -716,6 +731,7 @@ app.get('/user/:username/following', (req, res) => {
     limit = Number(limit);
     User.findOne({ username }, (err, user) => {
         if (err || !user) {
+            console.log("error user not found /user/" + username + "/following")
             res.status(400).json({ status: "error", error: "user not found" });
         } else {
             let users = [];
@@ -734,21 +750,23 @@ app.post('/follow', (req, res) => {
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
         if (!content) {
+            console.log("error no content provided /follow")
             res.status(400).json({ status: "error", error: "no content provided" })
         }
         else {
+            console.log("error invalid cookie /follow");
             res.status(400).json({ status: "error", error: "invalid cookie" });
-            console.log("invalid cookie " + cookie);
+            //F console.log("invalid cookie " + cookie);
         }
     } else {
         let username = req.body.username;
         let follow = req.body.follow;
         if (follow === "false") follow = false;
         if (follow != true && follow != false) follow = true;
-        console.log("FOLLOW?: " + follow);
+        //F console.log("FOLLOW?: " + follow);
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
-                console.log("error not logged in");
+                console.log("error not logged in /follow");
                 res.status(400).json({ status: "error", error: "not logged in" });
             } else {
                 if (user.username === username) {
@@ -764,9 +782,9 @@ app.post('/follow', (req, res) => {
                         else {
                             let following = user.following;
                             let followers = user1.followers;
-                            console.log("Following: " + following);
-                            console.log("Wants to follow: " + user1.username);
-                            console.log("Their followers: " + followers);
+                            //F console.log("Following: " + following);
+                            //F console.log("Wants to follow: " + user1.username);
+                            //F console.log("Their followers: " + followers);
                             if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
                                 if (follow) {
                                     res.status(400).json({ status: "error", error: "already following user" });
@@ -796,7 +814,7 @@ app.post('/follow', (req, res) => {
                                 user.save();
                                 user1.save();
                                 res.status(200).json({ status: "OK", message: "success" });
-                                console.log("res.json({ status: \"OK\" });")
+                                //F console.log("res.json({ status: \"OK\" });")
 
                             }
                         }
@@ -815,21 +833,25 @@ app.post('/item/:id/like', (req, res) => {
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
         res.status(400).json({ status: "error", error: "invalid cookie" });
-        console.log("invalid cookie " + cookie);
+        console.log("invalid cookie " + cookie + " in /item/" + id + "/like");
     }
     else {
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
+                console.log("error finding user /item/" + id + "/like")
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
                 if (user.likes.includes(id) && like) {
+                    console.log("error already liked tweet /item/" + id + "/like")
                     res.status(400).json({ status: "error", error: "already liked tweet" });
                 } else if (!user.likes.includes(id) && !like) {
+                    console.log("error can't unlike a tweet you haven't liked /item/" + id + "/like")
                     res.status(400).json({ status: "error", error: "can't unlike a tweet you haven't liked." })
                 }
                 else {
                     Tweet.findOne({ id }, (err, tweet) => {
                         if (err || !tweet) {
+                            console.log("error finding tweet /item/" + id + "/like")
                             res.status(400).json({ status: "error", error: "error finding tweet" });
                         } else {
                             let property = tweet.property;
@@ -841,11 +863,14 @@ app.post('/item/:id/like', (req, res) => {
                             }
                             let retweets = tweet.retweeted;
                             tweet.property = property;
-                            console.log(tweet.property);
+                            // console.log(tweet.property);
                             Tweet.updateOne({ id: tweet.id }, { property }, (err, tweet) => {
-                                if (err) res.status(400).json({ status: "error", error: "error incrementing like count of tweet" });
+                                if (err) {
+                                    console.log("error incrementing like count of tweet " + id);
+                                    res.status(400).json({ status: "error", error: "error incrementing like count of tweet" });
+                                }
                                 else {
-                                    console.log(tweet);
+                                    // console.log(tweet);
                                     let likes = user.likes;
                                     if (like) {
                                         likes.push(id);
@@ -854,7 +879,10 @@ app.post('/item/:id/like', (req, res) => {
                                         likes.splice(likes.indexOf(id), 1);
                                     }
                                     User.updateOne({ username: user.username }, { likes }, (err) => {
-                                        if (err) res.status(400).json({ status: "error", error: "error adding tweet to users liked tweets" });
+                                        if (err) {
+                                            console.log("error adding tweet " + id + " to users liked tweets")
+                                            res.status(400).json({ status: "error", error: "error adding tweet to users liked tweets" });
+                                        }
                                         else {
                                             res.status(200).json({ status: "OK", message: "Liked/unliked tweet successfully" });
                                         }
@@ -881,11 +909,12 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
     let cookie = req.cookies.jwt;
     if (typeof cookie === undefined || !cookie) {
         res.status(400).json({ status: "error", error: "invalid cookie" });
-        console.log("invalid cookie " + cookie);
+        console.log("invalid cookie " + cookie + " /addmedia");
     } else {
         const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
         User.findOne({ token: cookie }, (err, user) => {
             if (err || !user) {
+                console.log("error can't find logged in user /addmedia");
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
                 // const filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
@@ -895,7 +924,7 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
                 });
                 fs.createReadStream(req.file.path).pipe(streamwrite);
                 streamwrite.on("close", (file) => {
-                    console.log("wrote file " + filename + " to DB successfully.");
+                    //F console.log("wrote file " + filename + " to DB successfully.");
                 })
                 res.json({ status: "OK", id: filename });
                 // const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
@@ -915,23 +944,25 @@ app.get('/media/:id', (req, res) => {
     memcached.get(filename, (err, data) => {
         if (err || !data) {
             const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
-            console.log("fetching file " + filename + "....");
+            //F console.log("fetching file " + filename + "....");
             const readstream = gridfs.createReadStream({ filename });
 
             readstream.on("error", (err) => {
-                console.log(filename + " error not found....");
-                if (err)
+                //F console.log(filename + " error not found....");
+                if (err) {
+                    console.log("Error media file not found /media/" + filename);
                     res.sendStatus(404);
-                    // res.status(404).end();
+                }
+                // res.status(404).end();
             });
 
             readstream.on('data', (data) => {
                 if (data) {
                     res.write(data);
-                    console.log("data being sent in res...")
+                    //F console.log("data being sent in res...")
                     memcached.set(filename, data, 30, (err) => {
                         if (err) throw err;
-                        console.log("Successfully saved " + filename + " to cache.");
+                        //F console.log("Successfully saved " + filename + " to cache.");
                     });
                 }
             });
@@ -945,8 +976,8 @@ app.get('/media/:id', (req, res) => {
             // readstream.pipe(res);
 
             readstream.on("close", (file) => {
-                console.log("read file " + filename + " from DB successfully");
-                console.log(file);
+                //F console.log("read file " + filename + " from DB successfully");
+                // console.log(file);
                 if (file) {
                     res.writeHead(200, {
                         'Content-Type': mime.lookup(filename)
@@ -958,7 +989,7 @@ app.get('/media/:id', (req, res) => {
             });
         }
         else {
-            console.log("found in memcache!");
+            //F console.log("found in memcache!");
             // res.writeHead(200, {
             //     'Content-Type': mime.lookup(filename)
             // });
@@ -997,7 +1028,7 @@ app.post('/reset', (req, res) => {
                 const query = 'TRUNCATE m3.media;';
                 const params = [];
                 // cassandraClient.execute(query, params, { prepare: true }).then(() => {
-                console.log("Mongo cassandra and elastic cleared");
+                //F console.log("Mongo cassandra and elastic cleared");
                 res.status(200).json({ status: "OK", message: "mongodb/cassandra/elasticsearch cleared" });
                 // });
 
@@ -1008,7 +1039,7 @@ app.post('/reset', (req, res) => {
 });
 
 app.get('/verify', (req, res) => {
-    console.log("verify...");
+    //F console.log("verify...");
     res.render('signup/verify.ejs');
 });
 
@@ -1019,12 +1050,13 @@ app.get('/home', (req, res) => {
         res.clearCookie('jwt');
         // res.status(400).json({ status: "error", message: "invalid cookie" });
         // console.log("invalid cookie");
+        console.log("/home user not logged in")
         res.status(400).json({ status: "error", error: "user not logged in" });
     }
     else {
         User.findOne({ 'token': cookie }, (err, user) => {
             if (err || !user) {
-                console.log(err);
+                // console.log(err);
                 res.clearCookie('jwt');
                 res.status(400).json({ status: "error", error: "user not found" });
 
@@ -1037,5 +1069,5 @@ app.get('/home', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log('Server started on port ' + port);
+    //F console.log('Server started on port ' + port);
 });
