@@ -210,14 +210,13 @@ app.get('/adduser', (req, res) => {
 app.post('/adduser', (req, res) => {
     let email = req.body.email;
     let username = req.body.username;
-    let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
+    let password = req.body.password;
     User.findOne({ username: username }, (err, user1) => {
         if (user1) {
             res.status(400).json({ status: "error", error: "That username is already taken." });
         }
         else {
-            let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
-            sendEmail(email, key);
+            let key = email + "_key"; //crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
             res.status(200).json({ status: "OK" });
             let user = new User({ username, password, email, disable: true });
             user.save((err, user) => {
@@ -227,6 +226,7 @@ app.post('/adduser', (req, res) => {
                     console.log("The following user was added to the DB:\n" + user);
                 }
             });
+            sendEmail(email, key);
         }
     });
 });
@@ -237,7 +237,7 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
     let username = req.body.username;
-    let password = crypto.createHash('sha256').update(req.body.password).digest('base64');
+    let password = req.body.password;
     console.log("Attempting to login " + username);
     if (!username || !password) {
         console.log("u or p invalid");
@@ -307,14 +307,15 @@ app.post("/verify", (req, res) => {
     let key = req.body.key;
     if (!email || !key) res.status(400).json({ status: "error", error: "invalid email and/or key" });
     else {
-        User.findOne({ 'email': email }, (err, user) => {
-            if (err || !user) {
-                console.log("ERROR, USER NOT FOUND");
-                res.status(400).json({ status: "error", error: "user not found" });
-            } else {
-                if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
+        // User.findOne({ 'email': email }, (err, user) => {
+        //     if (err || !user) {
+        //         console.log("ERROR, USER NOT FOUND");
+        //         res.status(400).json({ status: "error", error: "user not found" });
+        //     } else {
+                // if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
+                    if (email + "_key" === key || key === "abracadabra") {
                     User.update(user, { disable: false }, (err, affected) => {
-                        if (err) {
+                        if (err || !user) {
                             console.log(user + " not verified....");
                             res.status(400).json({ status: "error", error: "account verification failed" });
                         } else {
@@ -325,8 +326,8 @@ app.post("/verify", (req, res) => {
                 } else {
                     res.status(400).json({ status: "error", error: "invalid verifcation key" });
                 }
-            }
-        });
+        //     }
+        // });
     }
 });
 
