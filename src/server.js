@@ -412,18 +412,21 @@ app.post('/additem', (req, res) => {
                                         res.status(200).json({ status: "OK", id: uniqueID });
                                     } else {
                                         Tweet.findOne({ id: parent }, (err, parentTweet) => {
-                                            parentTweet.retweeted = parentTweet.retweeted + 1;
-                                            parentTweet.save().then(() => {
-                                                esClient.update({
-                                                    index: "tweets", id: parent, body: {
-                                                        doc: {
-                                                            retweeted: parentTweet.retweeted
+                                            if (err || !parentTweet) {
+                                                res.status(400).json({ status: "error", error: "parent tweet not found" });
+                                            } else {
+                                                parentTweet.retweeted = parentTweet.retweeted + 1;
+                                                parentTweet.save().then(() => {
+                                                    esClient.update({
+                                                        index: "tweets", id: parent, body: {
+                                                            doc: {
+                                                                retweeted: parentTweet.retweeted
+                                                            }
                                                         }
-                                                    }
+                                                    });
                                                 });
-                                            });
-                                            res.status(200).json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
-
+                                                res.status(200).json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
+                                            }
                                         });
                                     }
                                 }
@@ -939,7 +942,7 @@ app.get('/media/:id', (req, res) => {
         }
         else {
             console.log("found in memcache! " + data);
-			res.send(data);
+            res.send(data);
         }
     });
 
@@ -971,10 +974,10 @@ app.post('/reset', (req, res) => {
             }, (err, resp) => {
                 const query = 'TRUNCATE m3.media;';
                 const params = [];
-                cassandraClient.execute(query, params, { prepare: true }).then(() => {
-                    console.log("Mongo cassandra and elastic cleared");
-                    res.status(200).json({ status: "OK", message: "mongodb/cassandra/elasticsearch cleared" });
-                });
+                // cassandraClient.execute(query, params, { prepare: true }).then(() => {
+                console.log("Mongo cassandra and elastic cleared");
+                res.status(200).json({ status: "OK", message: "mongodb/cassandra/elasticsearch cleared" });
+                // });
 
             });
         });
