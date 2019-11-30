@@ -2,6 +2,7 @@ const cassandraIP = '192.168.122.70';
 const mongoIP = "192.168.122.78";
 const mailServerIP = "localhost";
 const elasticIP = "192.168.122.76:9200";
+const memcachedIP = "localhost";
 
 
 /**
@@ -64,7 +65,7 @@ var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
 
 /**
- * SETUP CASSANDRA DB / MULTER STUFF
+ * SETUP MONGODB GRIDFS / MULTER STUFF
  */
 var fs = require('fs');
 var mime = require('mime-types');
@@ -112,6 +113,19 @@ esClient.indices.create({
             }
         }
     }
+});
+
+/**
+ * SETUP MEMCACHED STUFF
+ */
+const Memcached = require('memcached');
+const memcached = new Memcached();
+memcached.connect(memcachedIP + ':11211', (err, conn) => {
+    if (err) {
+        console.log("Failed to connected to memcached..................");
+        throw err;
+    }
+    console.log("Connected to memcached!");
 });
 
 
@@ -888,35 +902,48 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
     }
 });
 
-app.get('/media/:id', multipart.single('content'), (req, res) => {
+app.get('/media/:id', (req, res) => {
     const filename = req.params.id;
-    const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
-    console.log("fetching file " + filename + "....");
-    res.writeHead(200, {
-        'Content-Type': mime.lookup(filename)
-    });
-    const readstream = gridfs.createReadStream({ filename });
+    memcached.get(filename, (err, data) => {
+        if (err || !data) {
+            const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
+            console.log("fetching file " + filename + "....");
+            res.writeHead(200, {
+                'Content-Type': mime.lookup(filename)
+            });
+            const readstream = gridfs.createReadStream({ filename });
 
-    readstream.on('data', (data) => {
-        res.write(data);
+            readstream.on('data', (data) => {
+                res.write(data);
+                memcached.set(filename, data, 30, (err) => {
+                    if (err) throw err;
+                    console.log("Successfully saved " + filename + " to cache.");
+                });
+            });
+
+            // readstream.on('end', (data) => {
+
+            // });
+
+            readstream.on("error", (err) => {
+                res.status(400).send();
+            });
+
+            // readstream.pipe(res);
+
+            readstream.on("close", (file) => {
+                console.log("read file " + filename + " from DB successfully");
+                console.log(file);
+                res.status(200).send();
+            });
+        }
+        else {
+            console.log("found in memcache! " + data);
+			res.send(data);
+        }
     });
 
-    // readstream.on('end', (data) => {
-        
-    // });
 
-    readstream.on("error", (err) => {
-        // console.log(err);
-        // console.log("ERJEIOREJROIJOIERJIOR");
-        res.status(400).send();
-    });
-
-    // readstream.pipe(res);
-    
-    readstream.on("close", (file) => {
-        console.log("read file " + filename + " from DB successfully");
-        res.status(200).send();
-    });
     // })
     // const query = 'SELECT path FROM media WHERE filename=?';
     // const params = [req.params.id];
