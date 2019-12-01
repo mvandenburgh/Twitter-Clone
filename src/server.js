@@ -243,13 +243,13 @@ app.post('/login', (req, res) => {
                                 expiresIn: '24h'
                             }
                         );
-                        User.update(user, { token: token }, (err) => {
-                            if (err) {
-                                //F console.log(user + " failed to generate cookie...");
-                            } else {
-                                //F console.log("Generated cookie " + token + " for user " + user);
-                            }
-                        });
+                        // User.update(user, { token: token }, (err) => {
+                        // if (err) {
+                        //F console.log(user + " failed to generate cookie...");
+                        // } else {
+                        //F console.log("Generated cookie " + token + " for user " + user);
+                        // }
+                        // });
                         res.cookie('jwt', token);
                         res.status(200).json({ status: "OK" });
                     }
@@ -276,8 +276,8 @@ app.post("/logout", (req, res) => {
                 console.log("invalid logout request " + cookie);
                 res.status(400).json({ status: "error", error: "invalid cookie" });
             } else {
-                user.token = undefined;
-                user.save();
+                // user.token = undefined;
+                // user.save();
                 //F console.log("LOGGED OUT " + user);
                 res.clearCookie('jwt');
                 res.status(200).json({ status: "OK", message: "logged out successfully" });
@@ -349,119 +349,126 @@ app.post('/additem', (req, res) => {
             //F console.log("invalid cookie " + cookie);
         }
     } else {
-        User.findOne({ 'token': cookie }, (err, user) => {
-            if (err || !user) {
-                console.log("invalid logout request " + cookie + " /additem");
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err || !decoded) {
+                console.log("not logged in " + cookie + " /additem");
                 res.status(400).json({ status: "error", error: "invalid cookie" });
-            } else {
-                let illegal = false;
-                for (const mediaId of media) {
-                    // console.log(mediaId.split("_"));
-                    if (mediaId.split("_")[0] != user.username) {
-                        illegal = true;
-                        break;
-                    }
-                }
-                if (illegal) {
-                    console.log("media file not owned by logged in user");
-                    res.status(400).json({ status: "error", error: "media file not owned by user logged in." });
-                }
-                else {
-                    let usedElsewhere = false;
-                    //F console.log("media: ")
-                    // console.log(media)
-                    Tweet.find({ hasMedia: true }, (err, tweets) => {
-                        // console.log(tweets);
-                        for (const tweet of tweets) {
-                            // console.log("current tweet media;")
-                            // console.log(tweet.media);
-                            for (const id of media) {
-                                if (tweet.media.includes(id)) {
-                                    usedElsewhere = true;
-                                    break;
-                                }
+            }
+            else {
+                User.findOne({ 'token': cookie }, (err, user) => {
+                    if (err || !user) {
+                        console.log("unable to find user in db " + cookie + " /additem");
+                        res.status(500).json({ status: "error", error: "invalid cookie" });
+                    } else {
+                        let illegal = false;
+                        for (const mediaId of media) {
+                            // console.log(mediaId.split("_"));
+                            if (mediaId.split("_")[0] != user.username) {
+                                illegal = true;
+                                break;
                             }
                         }
-                        if (usedElsewhere) {
-                            console.log("error media file used elsewhere")
-                            res.status(400).json({ status: "error", error: "media file is used elsewhere." });
+                        if (illegal) {
+                            console.log("media file not owned by logged in user");
+                            res.status(400).json({ status: "error", error: "media file not owned by user logged in." });
                         }
                         else {
-                            let hasMedia = false;
-                            if (media && media.length > 0) {
-                                hasMedia = true;
-                            }
-                            let uniqueID = uuidv1().substring(0, 8);
-                            let tweet = new Tweet({
-                                id: uniqueID,
-                                username: user.username,
-                                property: { likes: 0 },
-                                retweeted: 0,
-                                content: content,
-                                timestamp: Date.now(),
-                                childType,
-                                parent,
-                                media,
-                                hasMedia,
-                                interest: 0
-                            });
-
-                            tweet.save((err, tweet) => {
-                                if (err) {
-                                    console.log("Error: failed to post tweet  " + tweet + " /additem");
-                                    res.status(400).json({ status: "error", error: "failed to post tweet" });
-                                } else {
-                                    if (!parent || childType != "retweet") {
-                                        res.status(200).json({ status: "OK", id: uniqueID });
-                                    } else {
-                                        Tweet.findOne({ id: parent }, (err, parentTweet) => {
-                                            if (err || !parentTweet) {
-                                                console.log("error parent tweet not found");
-                                                res.status(400).json({ status: "error", error: "parent tweet not found" });
-                                            } else {
-                                                parentTweet.retweeted = parentTweet.retweeted + 1;
-                                                parentTweet.save().then(() => {
-                                                    esClient.update({
-                                                        index: "tweets", id: parent, body: {
-                                                            doc: {
-                                                                retweeted: parentTweet.retweeted
-                                                            }
-                                                        }
-                                                    });
-                                                });
-                                                res.status(200).json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
-                                            }
-                                        });
+                            let usedElsewhere = false;
+                            //F console.log("media: ")
+                            // console.log(media)
+                            Tweet.find({ hasMedia: true }, (err, tweets) => {
+                                // console.log(tweets);
+                                for (const tweet of tweets) {
+                                    // console.log("current tweet media;")
+                                    // console.log(tweet.media);
+                                    for (const id of media) {
+                                        if (tweet.media.includes(id)) {
+                                            usedElsewhere = true;
+                                            break;
+                                        }
                                     }
                                 }
-                                //F console.log("response is {status: OK, id: " + uniqueID + " }.");
+                                if (usedElsewhere) {
+                                    console.log("error media file used elsewhere")
+                                    res.status(400).json({ status: "error", error: "media file is used elsewhere." });
+                                }
+                                else {
+                                    let hasMedia = false;
+                                    if (media && media.length > 0) {
+                                        hasMedia = true;
+                                    }
+                                    let uniqueID = uuidv1().substring(0, 8);
+                                    let tweet = new Tweet({
+                                        id: uniqueID,
+                                        username: user.username,
+                                        property: { likes: 0 },
+                                        retweeted: 0,
+                                        content: content,
+                                        timestamp: Date.now(),
+                                        childType,
+                                        parent,
+                                        media,
+                                        hasMedia,
+                                        interest: 0
+                                    });
+
+                                    tweet.save((err, tweet) => {
+                                        if (err) {
+                                            console.log("Error: failed to post tweet  " + tweet + " /additem");
+                                            res.status(400).json({ status: "error", error: "failed to post tweet" });
+                                        } else {
+                                            if (!parent || childType != "retweet") {
+                                                res.status(200).json({ status: "OK", id: uniqueID });
+                                            } else {
+                                                Tweet.findOne({ id: parent }, (err, parentTweet) => {
+                                                    if (err || !parentTweet) {
+                                                        console.log("error parent tweet not found");
+                                                        res.status(400).json({ status: "error", error: "parent tweet not found" });
+                                                    } else {
+                                                        parentTweet.retweeted = parentTweet.retweeted + 1;
+                                                        parentTweet.save().then(() => {
+                                                            esClient.update({
+                                                                index: "tweets", id: parent, body: {
+                                                                    doc: {
+                                                                        retweeted: parentTweet.retweeted
+                                                                    }
+                                                                }
+                                                            });
+                                                        });
+                                                        res.status(200).json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
+                                                    }
+                                                });
+                                            }
+                                        }
+                                        //F console.log("response is {status: OK, id: " + uniqueID + " }.");
+                                    });
+
+
+                                    let e = {
+                                        id: uniqueID,
+                                        username: user.username,
+                                        property: { likes: 0 },
+                                        retweeted: 0,
+                                        content: content,
+                                        timestamp: Date.now(),
+                                        childType,
+                                        parent,
+                                        media,
+                                        hasMedia,
+                                        interest: 0
+                                    };
+
+                                    esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
+                                        //F console.log("successfully indexed tweet in elasticsearch");
+                                    });
+                                }
                             });
 
-
-                            let e = {
-                                id: uniqueID,
-                                username: user.username,
-                                property: { likes: 0 },
-                                retweeted: 0,
-                                content: content,
-                                timestamp: Date.now(),
-                                childType,
-                                parent,
-                                media,
-                                hasMedia,
-                                interest: 0
-                            };
-
-                            esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
-                                //F console.log("successfully indexed tweet in elasticsearch");
-                            });
                         }
-                    });
-
-                }
+                    }
+                });
             }
         });
-
     }
 });
 
@@ -508,44 +515,52 @@ app.delete('/item/:id', (req, res) => {
             res.status(400).json({ status: "error", error: "invalid cookie/not logged in" });
             console.log("invalid cookie " + cookie);
         } else {
-            User.findOne({ 'token': cookie }, (err, user) => {
-                if (err || !user) {
-                    console.log("invalid logout request " + cookie + " /item/" + id);
+            jwt.verify(cookie, config.secret, (err, decoded) => {
+                if (err || !decoded) {
+                    console.log("not logged in " + cookie + " /item/" + id);
                     res.status(400).json({ status: "error", error: "invalid cookie" });
-                } else {
-                    Tweet.findOne({ id: id }, (err, tweet) => {
-                        if (err || !tweet) {
-                            console.log("Error tweet to delete not found")
-                            res.status(400).json({ status: "error", error: "tweet not found" });
+                }
+                else {
+                    User.findOne({ username: decoded.username }, (err, user) => {
+                        if (err || !user) {
+                            console.log("can't find user in database " + cookie + " /item/" + id);
+                            res.status(500).json({ status: "error", error: "invalid cookie" });
                         } else {
-                            if (tweet.username !== user.username) {
-                                console.log("error attempting to delete someone else's tweet")
-                                res.status(400).json({ status: "error", error: "attempting to delete another user's tweet" });
-                            } else {
-                                Tweet.deleteOne({ id: id }, (err) => {
-                                    if (err) {
-                                        console.log("Unable to delete tweet from mongodb")
-                                        res.status(400).json({ status: "error", error: "unable to delete tweet " + id });
+                            Tweet.findOne({ id: id }, (err, tweet) => {
+                                if (err || !tweet) {
+                                    console.log("Error tweet to delete not found")
+                                    res.status(400).json({ status: "error", error: "tweet not found" });
+                                } else {
+                                    if (tweet.username !== user.username) {
+                                        console.log("error attempting to delete someone else's tweet")
+                                        res.status(400).json({ status: "error", error: "attempting to delete another user's tweet" });
                                     } else {
-                                        // const query = 'DELETE FROM media WHERE filename=?';
-                                        const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
-                                        tweet.media.forEach((filename) => {
-                                            gridfs.remove({ filename }, (err) => {
-                                                if (err) console.log(err);
-                                            });
-                                            // const params = [filename];
-                                            // cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Deleted " + params[0]));
+                                        Tweet.deleteOne({ id: id }, (err) => {
+                                            if (err) {
+                                                console.log("Unable to delete tweet from mongodb")
+                                                res.status(400).json({ status: "error", error: "unable to delete tweet " + id });
+                                            } else {
+                                                // const query = 'DELETE FROM media WHERE filename=?';
+                                                const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
+                                                tweet.media.forEach((filename) => {
+                                                    gridfs.remove({ filename }, (err) => {
+                                                        if (err) console.log(err);
+                                                    });
+                                                    // const params = [filename];
+                                                    // cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Deleted " + params[0]));
+                                                });
+                                                res.status(200).json({ status: "OK", message: "successfully deleted tweet and associated media files" }); // success 
+                                            }
                                         });
-                                        res.status(200).json({ status: "OK", message: "successfully deleted tweet and associated media files" }); // success 
+                                        esClient.delete({ index: 'tweets', id, type: 'tweet' }, (err, resp, status) => {
+                                            // console.log(resp);
+                                        });
                                     }
-                                });
-                                esClient.delete({ index: 'tweets', id, type: 'tweet' }, (err, resp, status) => {
-                                    // console.log(resp);
-                                });
-                            }
+                                }
+                            });
+
                         }
                     });
-
                 }
             });
         }
@@ -764,62 +779,69 @@ app.post('/follow', (req, res) => {
         if (follow === "false") follow = false;
         if (follow != true && follow != false) follow = true;
         //F console.log("FOLLOW?: " + follow);
-        User.findOne({ token: cookie }, (err, user) => {
-            if (err || !user) {
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err || !decoded) {
                 console.log("error not logged in /follow");
                 res.status(400).json({ status: "error", error: "not logged in" });
-            } else {
-                if (user.username === username) {
-                    res.status(400).json({ status: "error", error: "can't follow yourself" });
-                    console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
-                }
-                else {
-                    User.findOne({ username }, (err, user1) => {
-                        if (err || !user1) {
-                            res.status(400).json({ status: "error", error: "user doesn't exist." });
-                            console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
+            }
+            else {
+                User.findOne({ username: decoded.username }, (err, user) => {
+                    if (err || !user) {
+
+                    } else {
+                        if (user.username === username) {
+                            res.status(400).json({ status: "error", error: "can't follow yourself" });
+                            console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
                         }
                         else {
-                            let following = user.following;
-                            let followers = user1.followers;
-                            //F console.log("Following: " + following);
-                            //F console.log("Wants to follow: " + user1.username);
-                            //F console.log("Their followers: " + followers);
-                            if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
-                                if (follow) {
-                                    res.status(400).json({ status: "error", error: "already following user" });
-                                    console.log("res.json({ status: \"error\", error: \"already following user\" });")
+                            User.findOne({ username }, (err, user1) => {
+                                if (err || !user1) {
+                                    res.status(400).json({ status: "error", error: "user doesn't exist." });
+                                    console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
                                 }
                                 else {
-                                    res.status(400).json({ status: "error", error: "not following this user to begin with." });
-                                    console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
-                                }
-                                // res.json({status:"OK", message:"already following user/not following user, no action needed"});
-                            } else {
-                                if (follow) {
-                                    following.push(user1.username);
-                                    followers.push(user.username);
-                                } else {
-                                    following.splice(following.indexOf(user1.username), 1);
-                                    followers.splice(followers.indexOf(user.username), 1);
-                                }
-                                User.update(user, { following: following }, (err) => {
-                                    if (err) console.log("error updating " + user);
-                                    else console.log("updated following for " + user);
-                                });
-                                User.update(user1, { followers: followers }, (err) => {
-                                    if (err) console.log("error updating " + user1);
-                                    else console.log("updated followers for " + user1);
-                                });
-                                user.save();
-                                user1.save();
-                                res.status(200).json({ status: "OK", message: "success" });
-                                //F console.log("res.json({ status: \"OK\" });")
+                                    let following = user.following;
+                                    let followers = user1.followers;
+                                    //F console.log("Following: " + following);
+                                    //F console.log("Wants to follow: " + user1.username);
+                                    //F console.log("Their followers: " + followers);
+                                    if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
+                                        if (follow) {
+                                            res.status(400).json({ status: "error", error: "already following user" });
+                                            console.log("res.json({ status: \"error\", error: \"already following user\" });")
+                                        }
+                                        else {
+                                            res.status(400).json({ status: "error", error: "not following this user to begin with." });
+                                            console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
+                                        }
+                                        // res.json({status:"OK", message:"already following user/not following user, no action needed"});
+                                    } else {
+                                        if (follow) {
+                                            following.push(user1.username);
+                                            followers.push(user.username);
+                                        } else {
+                                            following.splice(following.indexOf(user1.username), 1);
+                                            followers.splice(followers.indexOf(user.username), 1);
+                                        }
+                                        User.update(user, { following: following }, (err) => {
+                                            if (err) console.log("error updating " + user);
+                                            else console.log("updated following for " + user);
+                                        });
+                                        User.update(user1, { followers: followers }, (err) => {
+                                            if (err) console.log("error updating " + user1);
+                                            else console.log("updated followers for " + user1);
+                                        });
+                                        user.save();
+                                        user1.save();
+                                        res.status(200).json({ status: "OK", message: "success" });
+                                        //F console.log("res.json({ status: \"OK\" });")
 
-                            }
+                                    }
+                                }
+                            });
                         }
-                    });
-                }
+                    }
+                });
             }
         });
     }
@@ -836,70 +858,77 @@ app.post('/item/:id/like', (req, res) => {
         console.log("invalid cookie " + cookie + " in /item/" + id + "/like");
     }
     else {
-        User.findOne({ token: cookie }, (err, user) => {
-            if (err || !user) {
-                console.log("error finding user /item/" + id + "/like")
-                res.status(400).json({ status: "error", error: "error finding user" });
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err || !decoded) {
+                console.log("not logged in. /item/" + id + "/like")
+                res.status(400).json({ status: "error", error: "not logged in" });
             } else {
-                if (user.likes.includes(id) && like) {
-                    console.log("error already liked tweet /item/" + id + "/like")
-                    res.status(400).json({ status: "error", error: "already liked tweet" });
-                } else if (!user.likes.includes(id) && !like) {
-                    console.log("error can't unlike a tweet you haven't liked /item/" + id + "/like")
-                    res.status(400).json({ status: "error", error: "can't unlike a tweet you haven't liked." })
-                }
-                else {
-                    Tweet.findOne({ id }, (err, tweet) => {
-                        if (err || !tweet) {
-                            console.log("error finding tweet /item/" + id + "/like")
-                            res.status(400).json({ status: "error", error: "error finding tweet" });
-                        } else {
-                            let property = tweet.property;
-                            if (like) {
-                                property.likes = property.likes + 1;
-                            }
-                            else {
-                                property.likes = property.likes - 1;
-                            }
-                            let retweets = tweet.retweeted;
-                            tweet.property = property;
-                            // console.log(tweet.property);
-                            Tweet.updateOne({ id: tweet.id }, { property }, (err, tweet) => {
-                                if (err) {
-                                    console.log("error incrementing like count of tweet " + id);
-                                    res.status(400).json({ status: "error", error: "error incrementing like count of tweet" });
-                                }
-                                else {
-                                    // console.log(tweet);
-                                    let likes = user.likes;
+                User.findOne({ username: decoded.username }, (err, user) => {
+                    if (err || !user) {
+                        console.log("error finding user /item/" + id + "/like")
+                        res.status(400).json({ status: "error", error: "error finding user" });
+                    } else {
+                        if (user.likes.includes(id) && like) {
+                            console.log("error already liked tweet /item/" + id + "/like")
+                            res.status(400).json({ status: "error", error: "already liked tweet" });
+                        } else if (!user.likes.includes(id) && !like) {
+                            console.log("error can't unlike a tweet you haven't liked /item/" + id + "/like")
+                            res.status(400).json({ status: "error", error: "can't unlike a tweet you haven't liked." })
+                        }
+                        else {
+                            Tweet.findOne({ id }, (err, tweet) => {
+                                if (err || !tweet) {
+                                    console.log("error finding tweet /item/" + id + "/like")
+                                    res.status(400).json({ status: "error", error: "error finding tweet" });
+                                } else {
+                                    let property = tweet.property;
                                     if (like) {
-                                        likes.push(id);
+                                        property.likes = property.likes + 1;
                                     }
                                     else {
-                                        likes.splice(likes.indexOf(id), 1);
+                                        property.likes = property.likes - 1;
                                     }
-                                    User.updateOne({ username: user.username }, { likes }, (err) => {
+                                    let retweets = tweet.retweeted;
+                                    tweet.property = property;
+                                    // console.log(tweet.property);
+                                    Tweet.updateOne({ id: tweet.id }, { property }, (err, tweet) => {
                                         if (err) {
-                                            console.log("error adding tweet " + id + " to users liked tweets")
-                                            res.status(400).json({ status: "error", error: "error adding tweet to users liked tweets" });
+                                            console.log("error incrementing like count of tweet " + id);
+                                            res.status(400).json({ status: "error", error: "error incrementing like count of tweet" });
                                         }
                                         else {
-                                            res.status(200).json({ status: "OK", message: "Liked/unliked tweet successfully" });
+                                            // console.log(tweet);
+                                            let likes = user.likes;
+                                            if (like) {
+                                                likes.push(id);
+                                            }
+                                            else {
+                                                likes.splice(likes.indexOf(id), 1);
+                                            }
+                                            User.updateOne({ username: user.username }, { likes }, (err) => {
+                                                if (err) {
+                                                    console.log("error adding tweet " + id + " to users liked tweets")
+                                                    res.status(400).json({ status: "error", error: "error adding tweet to users liked tweets" });
+                                                }
+                                                else {
+                                                    res.status(200).json({ status: "OK", message: "Liked/unliked tweet successfully" });
+                                                }
+                                            });
+                                        }
+                                    });
+
+                                    esClient.update({
+                                        index: "tweets", id, body: {
+                                            doc: {
+                                                property, interest: retweets + property.likes
+                                            }
                                         }
                                     });
                                 }
                             });
-
-                            esClient.update({
-                                index: "tweets", id, body: {
-                                    doc: {
-                                        property, interest: retweets + property.likes
-                                    }
-                                }
-                            });
                         }
-                    });
-                }
+                    }
+                });
             }
         });
     }
@@ -912,13 +941,14 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
         console.log("invalid cookie " + cookie + " /addmedia");
     } else {
         const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
-        User.findOne({ token: cookie }, (err, user) => {
-            if (err || !user) {
+        // User.findOne({ token: cookie }, (err, user) => {
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err || !decoded) {
                 console.log("error can't find logged in user /addmedia");
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
                 // const filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
-                const filename = user.username + "_" + req.file.path.split('/')[2];
+                const filename = decoded.username + "_" + req.file.path.split('/')[2];
                 const streamwrite = gridfs.createWriteStream({
                     filename
                 });
@@ -1054,15 +1084,23 @@ app.get('/home', (req, res) => {
         res.status(400).json({ status: "error", error: "user not logged in" });
     }
     else {
-        User.findOne({ 'token': cookie }, (err, user) => {
-            if (err || !user) {
-                // console.log(err);
+        // User.findOne({ 'token': cookie }, (err, user) => {
+        //     if (err || !user) {
+        //         // console.log(err);
+        //         res.clearCookie('jwt');
+        //         res.status(400).json({ status: "error", error: "user not found" });
+
+        //     } else {
+        //         let username = user.username;
+        //         res.status(200).json({ status: "OK", username })
+        //     }
+        // });
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err) {
                 res.clearCookie('jwt');
                 res.status(400).json({ status: "error", error: "user not found" });
-
             } else {
-                let username = user.username;
-                res.status(200).json({ status: "OK", username })
+                res.status(200).json({ status: "OK", decoded });
             }
         });
     }
