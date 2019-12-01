@@ -597,9 +597,11 @@ app.post('/search', (req, res) => {
         bool: {
             must: [],
             filter: [
-                { range: { timestamp: { lte: timestamp } } }
+                { range: { timestamp: { lte: timestamp } } },
+                // { terms: { username: [] } }
             ]
-        }
+        },
+
     }
     if (hasMedia) {
         query.bool.must.push({
@@ -620,6 +622,7 @@ app.post('/search', (req, res) => {
     if (replies === false) {
         query.bool.filter.push({ not: { term: { childType: "reply" } } })
     }
+
     let cookie = req.cookies.jwt;
     if (!cookie) cookie = "";
     // console.log(query);
@@ -634,12 +637,7 @@ app.post('/search', (req, res) => {
             { interest: "desc" }
         ];
     }
-
-
-    // const util = require('util');
-    // console.log(util.inspect(query, false, null, true /* enable colors */))
-
-    User.findOne({ token: cookie }, (err, loggedInUser) => {
+    if (!following) {
         esClient.search({
             index: 'tweets',
             type: 'tweet',
@@ -687,12 +685,82 @@ app.post('/search', (req, res) => {
                         res.status(200).json({ status: "OK", items })
                     }
                 });
-
-
+            }
+        });
+    }
+    else {
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err || !decoded) {
+                res.json({ status: "error", error: "Not logged in, can't filter by followers." })
+            }
+            else {
+                User.findOne({ username: decoded.username }, (err, user) => {
+                    if (err || !user) {
+                        res.status(500).json({ status: "OK", message: "user not found in database" })
+                    }
+                    else {
+                        // query.terms = { username: [] };
+                        
+                        // user.following.forEach((followee) => {
+                        //     query.terms.username.push(followee);
+                        // });
+                        // console.log(JSON.stringify(query));
+                        esClient.search({
+                            index: 'tweets',
+                            type: 'tweet',
+                            body: { size: limit, sort, query }
+                        }, (err, resp, status) => {
+                            if (err) {
+                                // console.log(query);
+                                // console.log(err);
+                                console.log("error in elastic search with query " + query);
+                                res.status(400).json({ status: "error", error: err });
+                            } else {
+                                let items = [];
+                                jwt.verify(cookie, config.secret, (err, decoded) => {
+                                    if (err || !decoded) {
+                                        resp.hits.hits.forEach((hit) => {
+                                            items.push({
+                                                id: hit._source.id,
+                                                username: hit._source.username,
+                                                property: hit._source.property,
+                                                retweeted: hit._source.retweeted,
+                                                content: hit._source.content,
+                                                timestamp: hit._source.timestamp / 1000,
+                                                childType: hit._source.childType,
+                                                parent: hit._source.parent,
+                                                media: hit._source.media
+                                            });
+                                        });
+                                        res.status(200).json({ status: "OK", items })
+                                    } else {
+                                        resp.hits.hits.forEach((hit) => {
+                                            // TODO: integrate only including followed users into elastic query rather than filtering out w/ .includes()
+                                            if (hit._source.username !== decoded.username && user.following.includes(hit._source.username)) {
+                                                items.push({
+                                                    id: hit._source.id,
+                                                    username: hit._source.username,
+                                                    property: hit._source.property,
+                                                    retweeted: hit._source.retweeted,
+                                                    content: hit._source.content,
+                                                    timestamp: hit._source.timestamp / 1000,
+                                                    childType: hit._source.childType,
+                                                    parent: hit._source.parent,
+                                                    media: hit._source.media
+                                                });
+                                            }
+                                        });
+                                        res.status(200).json({ status: "OK", items })
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
 
             }
         });
-    });
+    }
 });
 
 app.get('/user/:username', (req, res) => {
