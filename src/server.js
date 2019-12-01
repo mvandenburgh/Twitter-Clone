@@ -272,18 +272,20 @@ app.post("/logout", (req, res) => {
         res.status(400).json({ status: "error", error: "not logged in" });
     }
     else {
-        User.findOne({ 'token': cookie }, (err, user) => {
-            if (err) {
-                console.log("invalid logout request " + cookie);
-                res.status(400).json({ status: "error", error: "invalid cookie" });
-            } else {
-                // user.token = undefined;
-                // user.save();
-                //F console.log("LOGGED OUT " + user);
-                res.clearCookie('jwt');
-                res.status(200).json({ status: "OK", message: "logged out successfully" });
-            }
-        });
+        // User.findOne({ 'token': cookie }, (err, user) => {
+        //     if (err) {
+        //         console.log("invalid logout request " + cookie);
+        //         res.status(400).json({ status: "error", error: "invalid cookie" });
+        //     } else {
+        //         // user.token = undefined;
+        //         // user.save();
+        //         //F console.log("LOGGED OUT " + user);
+        //         res.clearCookie('jwt');
+        //         res.status(200).json({ status: "OK", message: "logged out successfully" });
+        //     }
+        // });
+        res.clearCookie('jwt');
+        res.status(200).json({ status: "OK", message: "logged out successfully" });
     }
 });
 
@@ -356,7 +358,7 @@ app.post('/additem', (req, res) => {
                 res.status(400).json({ status: "error", error: "invalid cookie" });
             }
             else {
-                User.findOne({ 'token': cookie }, (err, user) => {
+                User.findOne({ username: decoded.username }, (err, user) => {
                     if (err || !user) {
                         console.log("unable to find user in db " + cookie + " /additem");
                         res.status(500).json({ status: "error", error: "invalid cookie" });
@@ -650,20 +652,44 @@ app.post('/search', (req, res) => {
                 res.status(400).json({ status: "error", error: err });
             } else {
                 let items = [];
-                resp.hits.hits.forEach((hit) => {
-                    items.push({
-                        id: hit._source.id,
-                        username: hit._source.username,
-                        property: hit._source.property,
-                        retweeted: hit._source.retweeted,
-                        content: hit._source.content,
-                        timestamp: hit._source.timestamp / 1000,
-                        childType: hit._source.childType,
-                        parent: hit._source.parent,
-                        media: hit._source.media
-                    });
+                jwt.verify(cookie, config.secret, (err, decoded) => {
+                    if (err || !decoded) {
+                        resp.hits.hits.forEach((hit) => {
+                            items.push({
+                                id: hit._source.id,
+                                username: hit._source.username,
+                                property: hit._source.property,
+                                retweeted: hit._source.retweeted,
+                                content: hit._source.content,
+                                timestamp: hit._source.timestamp / 1000,
+                                childType: hit._source.childType,
+                                parent: hit._source.parent,
+                                media: hit._source.media
+                            });
+                        });
+                        res.status(200).json({ status: "OK", items })
+                    } else {
+                        resp.hits.hits.forEach((hit) => {
+                            if (hit._source.username !== decoded.username) {
+                                items.push({
+                                    id: hit._source.id,
+                                    username: hit._source.username,
+                                    property: hit._source.property,
+                                    retweeted: hit._source.retweeted,
+                                    content: hit._source.content,
+                                    timestamp: hit._source.timestamp / 1000,
+                                    childType: hit._source.childType,
+                                    parent: hit._source.parent,
+                                    media: hit._source.media
+                                });
+                            }
+                        });
+                        res.status(200).json({ status: "OK", items })
+                    }
                 });
-                res.status(200).json({ status: "OK", items });
+
+
+
             }
         });
     });
