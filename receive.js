@@ -104,13 +104,34 @@ amqp.connect('amqp://localhost', function (error0, connection) {
             noAck: true
         });
 
-        channel.assertQueue('adduser');
-        channel.consume('adduser', function (msg) {
+        channel.assertQueue('writeTweet', { durable: false });
+        channel.consume('writeTweet', function (msg) {
             const message = JSON.parse(msg.content.toString());
-            console.log("Adding user " + message.username + " to DB");
-            adduserMongo(message);
+            console.log("Adding item w/ id " + message.id + " to DB");
+            writeTweet(message);
 
-        });
+        }), {
+                noAck: true
+            };
+        channel.assertQueue('likeTweet', { durable: false });
+        channel.consume('likeTweet', function (msg) {
+            const message = JSON.parse(msg.content.toString());
+            console.log("like/unlike item w/ id " + message.id + " to DB");
+            likeTweet(message);
+
+        }), {
+                noAck: true
+            };
+
+        channel.assertQueue('updateUsersLikes', { durable: false });
+        channel.consume('updateUsersLikes', function (msg) {
+            const message = JSON.parse(msg.content.toString());
+            console.log("updated likes of user " + message.username + " to DB");
+            likeTweet(message);
+
+        }), {
+                noAck: true
+            };
 
         console.log("RabbitMQ connected....")
     });
@@ -129,124 +150,126 @@ app.post('/listen', (req, res) => {
 app.listen(3000, () => console.log("RabbitMQ listening on 3000..."));
 
 
-adduserMongo = (msg) => {
-    const uniqueID = msg.id;
+likeTweet = (msg) => {
+    const id = msg.id;
+    const property = msg.property;
+    const retweets = msg.retweets;
+    Tweet.updateOne({ id }, { property }, (err, tweet) => {
+        if (err) {
+            console.log("[rabbitmq] error incrementing like count of tweet " + id);
+            // res.status(400).json({ status: "error", error: "error incrementing like count of tweet" });
+        }
+        else {
+            console.log("[rabbitmq] successfully liked/unliked tweet " + id);
+
+        }
+    });
+    esClient.update({
+        index: "tweets", id, body: {
+            doc: {
+                property, interest: retweets + property.likes
+            }
+        }
+    });
+}
+
+updateUsersLikes = (msg) => {
+    let likes = msg.likes;
+    if (msg.like) {
+        likes.push(msg.id);
+    }
+    else {
+        likes.splice(likes.indexOf(msg.id), 1);
+    }
+    User.updateOne({ username: msg.username }, { likes }, (err) => {
+        if (err) {
+              console.log("[rabbitmq] error adding tweet " + id + " to users liked tweets")
+            // res.status(400).json({ status: "error", error: "error adding tweet to users liked tweets" });
+        }
+        else {
+            console.log("[rabbitmq] succesffuly added tweet " + id + " to " + username + " liked tweets.");
+            // res.status(200).json({ status: "OK", message: "Liked/unliked tweet successfully" });
+        }
+    });
+}
+
+
+
+
+writeTweet = (msg) => {
+    console.log("writing to mongodb...");
+    const id = msg.id;
     const username = msg.username;
-    const content = msg.content;
+    const property = msg.property;
+    const retweeted = msg.retweeted;
+    const content = msg.content + " {inside rabbitmq!}";
     const timestamp = msg.timestamp;
     const childType = msg.childType;
     const parent = msg.parent;
     const media = msg.media;
+    const hasMedia = msg.hasMedia;
+    const interest = msg.interest;
 
-    User.findOne({ username }, (err, user) => {
-        if (err || !user) {
-              console.log("unable to find user in db " + cookie + " /additem");
-            res.status(500).json({ status: "error", error: "invalid cookie" });
+    const tweet = new Tweet({
+        id,
+        username,
+        property,
+        retweeted,
+        content,
+        timestamp,
+        childType,
+        parent,
+        media,
+        hasMedia,
+        interest
+    });
+
+    tweet.save((err, tweet) => {
+        if (err) {
+            console.log("Error: failed to post tweet  " + tweet + " /additem @rabbitmq");
+            // res.status(400).json({ status: "error", error: "failed to post tweet" });
         } else {
-            let illegal = false;
-            for (const mediaId of media) {
-                // console.log(mediaId.split("_"));
-                if (mediaId.split("_")[0] != user.username) {
-                    illegal = true;
-                    break;
-                }
-            }
-            if (illegal) {
-                  console.log("media file not owned by logged in user");
-                // res.status(400).json({ status: "error", error: "media file not owned by user logged in." });
-            }
-            else {
-                let usedElsewhere = false;
-                //F console.log("media: ")
-                // console.log(media)
-                Tweet.find({ hasMedia: true }, (err, tweets) => {
-                    // console.log(tweets);
-                    for (const tweet of tweets) {
-                        // console.log("current tweet media;")
-                        // console.log(tweet.media);
-                        for (const id of media) {
-                            if (tweet.media.includes(id)) {
-                                usedElsewhere = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (usedElsewhere) {
-                          console.log("error media file used elsewhere")
-                        // res.status(400).json({ status: "error", error: "media file is used elsewhere." });
-                    }
-                    else {
-                        let hasMedia = false;
-                        if (media && media.length > 0) {
-                            hasMedia = true;
-                        }
-                        let tweet = new Tweet({
-                            id: uniqueID,
-                            username: user.username,
-                            property: { likes: 0 },
-                            retweeted: 0,
-                            content: content,
-                            timestamp: Date.now(),
-                            childType,
-                            parent,
-                            media,
-                            hasMedia,
-                            interest: 0
-                        });
-
-                        tweet.save((err, tweet) => {
-                            if (err) {
-                                  console.log("Error: failed to post tweet  " + tweet + " /additem");
-                                // res.status(400).json({ status: "error", error: "failed to post tweet" });
-                            } else {
-                                if (!parent || childType != "retweet") {
-                                    // res.status(200).json({ status: "OK", id: uniqueID });
-                                } else {
-                                    Tweet.findOne({ id: parent }, (err, parentTweet) => {
-                                        if (err || !parentTweet) {
-                                              console.log("error parent tweet not found");
-                                            // res.status(400).json({ status: "error", error: "parent tweet not found" });
-                                        } else {
-                                            parentTweet.retweeted = parentTweet.retweeted + 1;
-                                            parentTweet.save().then(() => {
-                                                esClient.update({
-                                                    index: "tweets", id: parent, body: {
-                                                        doc: {
-                                                            retweeted: parentTweet.retweeted
-                                                        }
-                                                    }
-                                                });
-                                            });
-                                            // res.status(200).json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
-                                        }
-                                    });
+            if (!parent || childType != "retweet") {
+                // res.status(200).json({ status: "OK", id: uniqueID });
+            } else {
+                Tweet.findOne({ id: parent }, (err, parentTweet) => {
+                    if (err || !parentTweet) {
+                        console.log("error parent tweet not found @rabbitmq");
+                        // res.status(400).json({ status: "error", error: "parent tweet not found" });
+                    } else {
+                        parentTweet.retweeted = parentTweet.retweeted + 1;
+                        parentTweet.save().then(() => {
+                            esClient.update({
+                                index: "tweets", id: parent, body: {
+                                    doc: {
+                                        retweeted: parentTweet.retweeted
+                                    }
                                 }
-                            }
-                            //F console.log("response is {status: OK, id: " + uniqueID + " }.");
+                            });
                         });
-
-
-                        let e = {
-                            id: uniqueID,
-                            username: user.username,
-                            property: { likes: 0 },
-                            retweeted: 0,
-                            content: content,
-                            timestamp: Date.now(),
-                            childType,
-                            parent,
-                            media,
-                            hasMedia,
-                            interest: 0
-                        };
-
-                        esClient.index({ index: 'tweets', id: uniqueID, type: 'tweet', body: e }, (err, resp, status) => {
-                            //F console.log("successfully indexed tweet in elasticsearch");
-                        });
+                        // res.status(200).json({ status: "OK", id: uniqueID, message: "retweeted tweet successfully" });
+                        console.log("retweeted tweet " + id + " @rabbitmq")
                     }
                 });
-
             }
         }
+        //F console.log("response is {status: OK, id: " + uniqueID + " }.");
     });
+    const tweetES = {
+        id,
+        username,
+        property,
+        retweeted,
+        content,
+        timestamp,
+        childType,
+        parent,
+        media,
+        hasMedia,
+        interest
+    }
+    esClient.index({ index: 'tweets', id, type: 'tweet', body: tweetES }, (err, resp, status) => {
+        console.log("[rabbitMQ] successfully indexed tweet " + id + " in elasticsearch");
+    });
+
 }
