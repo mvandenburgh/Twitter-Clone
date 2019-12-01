@@ -81,28 +81,6 @@ amqp.connect('amqp://localhost', function (error0, connection) {
         if (error1) {
             throw error1;
         }
-        console.log('queue initialized');
-
-        channel.assertQueue('like', {
-            durable: false
-        });
-
-        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", 'like');
-        channel.consume('like', function (msg) {
-            console.log(" [like] Received %s", msg.content.toString());
-
-        }, {
-            noAck: true
-        });
-
-        channel.assertQueue('follow');
-        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", 'follow');
-        channel.consume('follow', function (msg) {
-            console.log(" [follow] Received %s", msg.content.toString());
-
-        }, {
-            noAck: true
-        });
 
         channel.assertQueue('writeTweet', { durable: false });
         channel.consume('writeTweet', function (msg) {
@@ -127,7 +105,7 @@ amqp.connect('amqp://localhost', function (error0, connection) {
         channel.consume('updateUsersLikes', function (msg) {
             const message = JSON.parse(msg.content.toString());
             console.log("updated likes of user " + message.username + " to DB");
-            likeTweet(message);
+            updateUsersLikes(message);
 
         }), {
                 noAck: true
@@ -154,6 +132,7 @@ likeTweet = (msg) => {
     const id = msg.id;
     const property = msg.property;
     const retweets = msg.retweets;
+    const likes = msg.likes;
     Tweet.updateOne({ id }, { property }, (err, tweet) => {
         if (err) {
             console.log("[rabbitmq] error incrementing like count of tweet " + id);
@@ -167,7 +146,7 @@ likeTweet = (msg) => {
     esClient.update({
         index: "tweets", id, body: {
             doc: {
-                property, interest: retweets + property.likes
+                property, interest: retweets + likes
             }
         }
     });
@@ -175,6 +154,8 @@ likeTweet = (msg) => {
 
 updateUsersLikes = (msg) => {
     let likes = msg.likes;
+    const id = msg.id;
+    const username = msg.username;
     if (msg.like) {
         likes.push(msg.id);
     }
@@ -183,7 +164,7 @@ updateUsersLikes = (msg) => {
     }
     User.updateOne({ username: msg.username }, { likes }, (err) => {
         if (err) {
-              console.log("[rabbitmq] error adding tweet " + id + " to users liked tweets")
+            console.log("[rabbitmq] error adding tweet " + id + " to users liked tweets")
             // res.status(400).json({ status: "error", error: "error adding tweet to users liked tweets" });
         }
         else {
@@ -196,13 +177,15 @@ updateUsersLikes = (msg) => {
 
 
 
+
+
 writeTweet = (msg) => {
     console.log("writing to mongodb...");
     const id = msg.id;
     const username = msg.username;
     const property = msg.property;
     const retweeted = msg.retweeted;
-    const content = msg.content + " {inside rabbitmq!}";
+    const content = msg.content;
     const timestamp = msg.timestamp;
     const childType = msg.childType;
     const parent = msg.parent;

@@ -1005,25 +1005,25 @@ app.post('/item/:id/like', (req, res) => {
     else {
         jwt.verify(cookie, config.secret, (err, decoded) => {
             if (err || !decoded) {
-                //   console.log("not logged in. /item/" + id + "/like")
+                console.log("not logged in. /item/" + id + "/like")
                 res.status(400).json({ status: "error", error: "not logged in" });
             } else {
                 User.findOne({ username: decoded.username }, (err, user) => {
                     if (err || !user) {
-                        //   console.log("error finding user /item/" + id + "/like")
+                        console.log("error finding user /item/" + id + "/like")
                         res.status(400).json({ status: "error", error: "error finding user" });
                     } else {
                         if (user.likes.includes(id) && like) {
-                            //   console.log("error already liked tweet /item/" + id + "/like")
+                            console.log("error already liked tweet /item/" + id + "/like")
                             res.status(400).json({ status: "error", error: "already liked tweet" });
                         } else if (!user.likes.includes(id) && !like) {
-                            //   console.log("error can't unlike a tweet you haven't liked /item/" + id + "/like")
+                            console.log("error can't unlike a tweet you haven't liked /item/" + id + "/like")
                             res.status(400).json({ status: "error", error: "can't unlike a tweet you haven't liked." })
                         }
                         else {
                             Tweet.findOne({ id }, (err, tweet) => {
                                 if (err || !tweet) {
-                                    //   console.log("error finding tweet /item/" + id + "/like")
+                                    console.log("error finding tweet /item/" + id + "/like")
                                     res.status(400).json({ status: "error", error: "error finding tweet" });
                                 } else {
                                     let property = tweet.property;
@@ -1040,16 +1040,17 @@ app.post('/item/:id/like', (req, res) => {
                                     const message1 = {
                                         id: tweet.id,
                                         property,
+                                        likes: property.likes,
                                         retweets: tweet.retweeted
                                     }
 
                                     const message2 = {
                                         username: user.username,
-                                        likes,
+                                        likes: user.likes,
                                         id: tweet.id,
                                         like
                                     }
-                                    res.json({status:"OK"});
+                                    res.json({ status: "OK" });
                                     amqp.connect('amqp://admin:password@' + rabbitmqIP, function (error0, connection) {
                                         if (error0) throw error0;
                                         connection.createChannel(function (error1, channel) {
