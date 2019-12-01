@@ -159,15 +159,16 @@ app.get('/', (req, res) => {
         res.render("home.ejs");
     }
     else {
-        User.findOne({ token: cookie }, (err, user) => {
-            if (err || !user) {
-                res.render("home.ejs");
+        jwt.verify(cookie, config.secret, (err, decoded) => {
+            if (err || !decoded) {
+                res.render("home.ejs")
             }
             else {
-                res.render("main/home.ejs", { username: user.username });
+                User.findOne({ username: decoded.username }, (err, user) => {
+                    res.render("main/home.ejs", { username: user.username });
+                });
             }
-        })
-
+        });
     }
 });
 
