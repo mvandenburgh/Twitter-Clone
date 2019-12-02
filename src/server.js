@@ -106,6 +106,8 @@ var Gridfs = require('gridfs-stream');
 Gridfs.mongo = mongoose.mongo;
 
 
+
+
 /**
  * SETUP ELASTICSEARCH STUFF
  */
@@ -344,7 +346,7 @@ app.post("/verify", (req, res) => {
                     });
                     // await user.save();
                     //F console.log(user.username + " is verified!");
-                    
+
                 } else {
                     //   console.log("res.status(400).json({ status: error, error: invalid verifcation key });")
                     res.status(400).json({ status: "error", error: "invalid verifcation key" });
@@ -926,7 +928,7 @@ app.post('/follow', (req, res) => {
         //F console.log("FOLLOW?: " + follow);
         jwt.verify(cookie, config.secret, (err, decoded) => {
             if (err || !decoded) {
-                  console.log("error not logged in /follow");
+                console.log("error not logged in /follow");
                 res.status(400).json({ status: "error", error: "not logged in" });
             }
             else {
@@ -936,13 +938,13 @@ app.post('/follow', (req, res) => {
                     } else {
                         if (user.username === username) {
                             res.status(400).json({ status: "error", error: "can't follow yourself" });
-                              console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
+                            console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
                         }
                         else {
                             User.findOne({ username }, (err, user1) => {
                                 if (err || !user1) {
                                     res.status(400).json({ status: "error", error: "user doesn't exist." });
-                                      console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
+                                    console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
                                 }
                                 else {
                                     let following = user.following;
@@ -953,11 +955,11 @@ app.post('/follow', (req, res) => {
                                     if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
                                         if (follow) {
                                             res.status(400).json({ status: "error", error: "already following user" });
-                                              console.log("res.json({ status: \"error\", error: \"already following user\" });")
+                                            console.log("res.json({ status: \"error\", error: \"already following user\" });")
                                         }
                                         else {
                                             res.status(400).json({ status: "error", error: "not following this user to begin with." });
-                                              console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
+                                            console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
                                         }
                                         // res.json({status:"OK", message:"already following user/not following user, no action needed"});
                                     } else {
@@ -968,11 +970,11 @@ app.post('/follow', (req, res) => {
                                             following.splice(following.indexOf(user1.username), 1);
                                             followers.splice(followers.indexOf(user.username), 1);
                                         }
-                                        User.updateOne({username: user.username}, { following }, (err) => {
+                                        User.updateOne({ username: user.username }, { following }, (err) => {
                                             if (err) console.log("error updating " + user);
                                             else console.log("updated following for " + user);
                                         });
-                                        User.updateOne({username: user1.username}, { followers }, (err) => {
+                                        User.updateOne({ username: user1.username }, { followers }, (err) => {
                                             if (err) console.log("error updating " + user1);
                                             else console.log("updated followers for " + user1);
                                         });
@@ -1123,30 +1125,19 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
         res.status(400).json({ status: "error", error: "invalid cookie" });
         //   console.log("invalid cookie " + cookie + " /addmedia");
     } else {
-        const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
-        // User.findOne({ token: cookie }, (err, user) => {
         jwt.verify(cookie, config.secret, (err, decoded) => {
             if (err || !decoded) {
-                //   console.log("error can't find logged in user /addmedia");
                 res.status(400).json({ status: "error", error: "error finding user" });
             } else {
-                // const filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
                 const filename = decoded.username + "_" + req.file.path.split('/')[2];
-                const streamwrite = gridfs.createWriteStream({
-                    filename
+                const upload_path = "/uploaded/"
+                const oldpath = req.file.path;
+                const newpath = upload_path + filename;
+                console.log(newpath);
+                fs.rename(oldpath, newpath, (err) => {
+                    if (err) console.log(err);
                 });
-                fs.createReadStream(req.file.path).pipe(streamwrite);
-                streamwrite.on("close", (file) => {
-                    //F console.log("wrote file " + filename + " to DB successfully.");
-                })
                 res.json({ status: "OK", id: filename });
-                // const query = 'INSERT INTO media (filename, contents, path) VALUES (?,?,?)';
-                // let filename = user.username + "_" + Date.now();// + mime.extension(req.file.mimetype);
-                // let contents = fs.readFileSync(req.file.path);
-                // const params = [filename, contents, req.file.path];
-                // console.log(req.file);
-                // cassandraClient.execute(query, params, { prepare: true }).then(result => console.log("Uploaded " + params[0]));
-                // res.json({ status: "OK", id: filename });
             }
         });
     }
@@ -1154,81 +1145,12 @@ app.post('/addmedia', multipart.single('content'), (req, res) => {
 
 app.get('/media/:id', (req, res) => {
     const filename = req.params.id;
-    memcached.get(filename, (err, data) => {
-        if (err || !data) {
-            const gridfs = Gridfs(mediaFilesDB.db, mongoose.mongo);
-            //F console.log("fetching file " + filename + "....");
-            const readstream = gridfs.createReadStream({ filename });
-
-            readstream.on("error", (err) => {
-                //F console.log(filename + " error not found....");
-                if (err) {
-                    //   console.log("Error media file not found /media/" + filename);
-                    res.sendStatus(404);
-                }
-                // res.status(404).end();
-            });
-
-            readstream.on('data', (data) => {
-                if (data) {
-                    res.write(data);
-                    //F console.log("data being sent in res...")
-                    memcached.set(filename, data, 30, (err) => {
-                        if (err) throw err;
-                        //F console.log("Successfully saved " + filename + " to cache.");
-                    });
-                }
-            });
-
-            // readstream.on('end', (data) => {
-
-            // });
-
-
-
-            // readstream.pipe(res);
-
-            readstream.on("close", (file) => {
-                //F console.log("read file " + filename + " from DB successfully");
-                // console.log(file);
-                if (file) {
-                    res.writeHead(200, {
-                        'Content-Type': mime.lookup(filename)
-                    });
-                    // res.status(200).end({ status: "OK" });
-                    res.sendStatus(200);
-                }
-
-            });
-        }
-        else {
-            //F console.log("found in memcache!");
-            // res.writeHead(200, {
-            //     'Content-Type': mime.lookup(filename)
-            // });
-            res.write(data);
-            // res.json({status:"OK"});
-            res.sendStatus(200);
-        }
-    });
-
-
-    // })
-    // const query = 'SELECT path FROM media WHERE filename=?';
-    // const params = [req.params.id];
-    // cassandraClient.execute(query, params, { prepare: true }, (err, result) => {
-    //     if (result.rows.length > 0) {
-    //         let image = result.rows[0].path;
-    //         res.writeHead(200, {
-    //             'Content-Type': mime.lookup(params[0])
-    //         });
-    //         let readStream = fs.createReadStream(image.toString());
-    //         readStream.pipe(res);
-    //     }
-    //     else {
-    //         res.status(400).json({ status: "error", error: "file not found" });
-    //     }
-    // });
+    const file = "/uploaded/" + filename;
+    if (fs.existsSync(file))
+        res.status(200).download(file);
+    else {
+        res.status(404).json({status:"error", error: "file " + filename + " not found."});
+    }
 });
 
 
