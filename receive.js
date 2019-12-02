@@ -1,5 +1,5 @@
 const elasticIP = "152.44.41.133:9200";
-const mongoIP = "152.44.33.112";
+const mongoIP = "152.44.37.76";
 
 
 /**
@@ -46,7 +46,7 @@ var userSchema = new mongoose.Schema({
     followers: Array,
     following: Array,
     likes: Array
-});
+}, { collection: "usersCollection" });
 var User = usersDB.model("User", userSchema);
 
 var tweetSchema = new mongoose.Schema({
@@ -62,7 +62,7 @@ var tweetSchema = new mongoose.Schema({
     media: Array,
     hasMedia: Boolean
     // likes: Number
-});
+}, { collection: "tweetsCollection" });
 var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
 
@@ -110,6 +110,8 @@ amqp.connect('amqp://localhost', function (error0, connection) {
         }), {
                 noAck: true
             };
+
+            
 
         console.log("RabbitMQ connected....")
     });

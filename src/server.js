@@ -1,6 +1,6 @@
 const cassandraIP = '192.168.122.70';
 const elasticIP = "152.44.41.133:9200";
-const mongoIP = "152.44.33.112";
+const mongoIP = "152.44.37.76";
 const mailServerIP = "209.50.56.98";
 const memcachedIP = "localhost";
 const rabbitmqIP = "152.44.33.77";
@@ -66,7 +66,7 @@ var userSchema = new mongoose.Schema({
     followers: Array,
     following: Array,
     likes: Array
-});
+}, { collection: "usersCollection" });
 var User = usersDB.model("User", userSchema);
 
 var tweetSchema = new mongoose.Schema({
@@ -82,7 +82,7 @@ var tweetSchema = new mongoose.Schema({
     media: Array,
     hasMedia: Boolean
     // likes: Number
-});
+}, { collection: "tweetsCollection" });
 var Tweet = tweetsDB.model("Tweet", tweetSchema);
 
 
@@ -166,7 +166,7 @@ var crypto = require('crypto');
 /**
  * SETUP UNIQUE ID GENERATOR
  */
-var uuidv1 = require("uuid/v1");
+var uuidv4 = require("uuid/v4");
 
 
 
@@ -187,7 +187,7 @@ app.get('/', (req, res) => {
             }
             else {
                 User.findOne({ username: decoded.username }, (err, user) => {
-                    res.render("main/home.ejs", { username: user.username });
+                    res.render("main/home.ejs", { username: decoded.username });
                 });
             }
         });
@@ -336,15 +336,15 @@ app.post("/verify", (req, res) => {
                         // user.save((err, user) => {
                         if (err || !user) {
                             //   console.log(email + " not verified....");
-                            res.status(400).json({ status: "error", error: "account verification failed." });
+                            res.status(400).json({ status: "error", error: "account verification failed.", err });
                         } else {
                             //F console.log(user.username + " account has been verified");
-
+                            res.status(200).json({ status: "OK" });
                         }
                     });
                     // await user.save();
                     //F console.log(user.username + " is verified!");
-                    res.status(200).json({ status: "OK" });
+                    
                 } else {
                     //   console.log("res.status(400).json({ status: error, error: invalid verifcation key });")
                     res.status(400).json({ status: "error", error: "invalid verifcation key" });
@@ -380,7 +380,7 @@ app.post('/additem', (req, res) => {
                 res.status(400).json({ status: "error", error: "invalid cookie" });
             }
             else {
-                let uniqueID = uuidv1().substring(0, 8);
+                let uniqueID = uuidv4();//.substring(0, 8);
                 let message = {
                     id: uniqueID,
                     username: decoded.username,
@@ -926,7 +926,7 @@ app.post('/follow', (req, res) => {
         //F console.log("FOLLOW?: " + follow);
         jwt.verify(cookie, config.secret, (err, decoded) => {
             if (err || !decoded) {
-                //   console.log("error not logged in /follow");
+                  console.log("error not logged in /follow");
                 res.status(400).json({ status: "error", error: "not logged in" });
             }
             else {
@@ -936,13 +936,13 @@ app.post('/follow', (req, res) => {
                     } else {
                         if (user.username === username) {
                             res.status(400).json({ status: "error", error: "can't follow yourself" });
-                            //   console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
+                              console.log("res.json({ status: 'error', error: \"can't follow yourself\" });")
                         }
                         else {
                             User.findOne({ username }, (err, user1) => {
                                 if (err || !user1) {
                                     res.status(400).json({ status: "error", error: "user doesn't exist." });
-                                    //   console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
+                                      console.log("res.json({ status: \"error\", error: \"user doesn't exist.\" });")
                                 }
                                 else {
                                     let following = user.following;
@@ -953,11 +953,11 @@ app.post('/follow', (req, res) => {
                                     if ((follow && following.includes(user1.username)) || (!follow && !following.includes(user1.username))) {
                                         if (follow) {
                                             res.status(400).json({ status: "error", error: "already following user" });
-                                            //   console.log("res.json({ status: \"error\", error: \"already following user\" });")
+                                              console.log("res.json({ status: \"error\", error: \"already following user\" });")
                                         }
                                         else {
                                             res.status(400).json({ status: "error", error: "not following this user to begin with." });
-                                            //   console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
+                                              console.log("res.json({ status: \"error\", error: \"not following this user to begin with.\" });")
                                         }
                                         // res.json({status:"OK", message:"already following user/not following user, no action needed"});
                                     } else {
@@ -968,16 +968,16 @@ app.post('/follow', (req, res) => {
                                             following.splice(following.indexOf(user1.username), 1);
                                             followers.splice(followers.indexOf(user.username), 1);
                                         }
-                                        User.update(user, { following: following }, (err) => {
-                                            // if (err) console.log("error updating " + user);
-                                            // else console.log("updated following for " + user);
+                                        User.updateOne({username: user.username}, { following }, (err) => {
+                                            if (err) console.log("error updating " + user);
+                                            else console.log("updated following for " + user);
                                         });
-                                        User.update(user1, { followers: followers }, (err) => {
-                                            // if (err) console.log("error updating " + user1);
-                                            // else console.log("updated followers for " + user1);
+                                        User.updateOne({username: user1.username}, { followers }, (err) => {
+                                            if (err) console.log("error updating " + user1);
+                                            else console.log("updated followers for " + user1);
                                         });
-                                        user.save();
-                                        user1.save();
+                                        console.log("following: " + following);
+                                        console.log("followers: " + followers);
                                         res.status(200).json({ status: "OK", message: "success" });
                                         //F console.log("res.json({ status: \"OK\" });")
 
