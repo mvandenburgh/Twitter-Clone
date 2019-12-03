@@ -1,4 +1,10 @@
 /**
+ * This app should be run on a seperate server from the main server.js to
+ * prevent performance bottlenecks resulting from the email process.
+ */
+
+ 
+/**
  * SETUP EXPRESS AND BODY-PARSER
  */
 const express = require('express')

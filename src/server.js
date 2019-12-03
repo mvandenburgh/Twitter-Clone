@@ -1,4 +1,3 @@
-const cassandraIP = '192.168.122.70';
 const elasticIP = "152.44.41.133:9200";
 const mongoIP = "152.44.37.76";
 const mailServerIP = "209.50.56.98";
