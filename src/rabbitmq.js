@@ -1,3 +1,10 @@
+/**
+ * This code should be run on a seperate instance from server.js
+ * that has RabbitMQ installed. All Elasticsearch writes and 
+ * some MongoDB writes are executed by this.
+ */
+
+
 const elasticIP = "152.44.41.133:9200";
 const mongoIP = "152.44.37.76";
 
