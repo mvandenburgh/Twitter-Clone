@@ -3,18 +3,6 @@ const mongoIP = "152.44.37.76";
 
 
 /**
- * SETUP EXPRESS
- */
-const express = require('express');
-const app = express();
-const bodyParser = require("body-parser");
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-app.use(express.json());
-app.use(express.static(__dirname + '/public'));
-
-
-/**
  * SETUP ELASTICSEARCH
  */
 const elasticsearch = require('elasticsearch');
@@ -116,18 +104,6 @@ amqp.connect('amqp://localhost', function (error0, connection) {
         console.log("RabbitMQ connected....")
     });
 });
-
-
-app.post('/listen', (req, res) => {
-    let msgs = req.body.msgs;
-    let typeOfQueue = req.body.type;
-    msgs.forEach((msg) => {
-        channel.sendToQueue(typeOfQueue, Buffer.from(msg));
-    });
-    res.json({ status: "OK" });
-});
-
-app.listen(3000, () => console.log("RabbitMQ listening on 3000..."));
 
 
 likeTweet = (msg) => {
