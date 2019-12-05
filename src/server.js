@@ -17,14 +17,12 @@ app.use(express.json());
 const port = 3000;
 const axios = require('axios');
 const qs = require('querystring');
-var path = require('path');
+const path = require('path');
 
 /**
  * SETUP RABBITMQ
  */
-var amqp = require('amqplib/callback_api');
-
-
+const amqp = require('amqplib/callback_api');
 
 /**
  * SETUP LOGGING
@@ -88,7 +86,6 @@ var Tweet = tweetsDB.model("Tweet", tweetSchema);
 /**
  * SETUP MONGODB GRIDFS / MULTER STUFF
  */
-var mime = require('mime-types');
 // var cassandra = require('cassandra-driver');
 // var cassandraClient = new cassandra.Client({ contactPoints: [cassandraIP], localDataCenter: 'datacenter1', keyspace: 'm3' });
 // cassandraClient.connect((err) => {
@@ -100,8 +97,8 @@ mediaFilesDB.on("connected", function () {
 });
 
 const multer = require('multer');
-var multipart = multer({ dest: '/uploads' });
-var Gridfs = require('gridfs-stream');
+const multipart = multer({ dest: '/uploads' });
+const Gridfs = require('gridfs-stream');
 Gridfs.mongo = mongoose.mongo;
 
 
@@ -153,10 +150,10 @@ memcached.connect(memcachedIP + ':11211', (err, conn) => {
 /**
  * SETUP COOKIES/SESSIONS STUFF
  */
-var cookies = require("cookie-parser");
-var jwt = require('jsonwebtoken');
-var config = require('./config.js');
-var jwtverify = require('./jwtverify.js');
+const cookies = require("cookie-parser");
+const jwt = require('jsonwebtoken');
+const config = require('./config.js');
+const jwtverify = require('./jwtverify.js');
 app.use(cookies());
 
 /**
@@ -215,7 +212,7 @@ app.post('/adduser', (req, res) => {
             res.status(400).json({ status: "error", error: "That username is already taken." });
         }
         else {
-            let key = email + "_key"; //crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
+            let key = crypto.createHash('sha256').update(username + email + "secretkey").digest('base64');
             res.status(200).json({ status: "OK" });
             let user = new User({ username, password, email, disable: true });
             user.save((err, user) => {
@@ -290,7 +287,6 @@ app.post('/login', (req, res) => {
 
 app.post("/logout", (req, res) => {
     let cookie = req.cookies.jwt;
-    // console.log(cookie);
     if (typeof cookie == undefined) {
         res.status(400).json({ status: "error", error: "not logged in" });
     }
@@ -330,8 +326,8 @@ app.post("/verify", (req, res) => {
                 //   console.log("ERROR, USER NOT FOUND");
                 res.status(400).json({ status: "error", error: "user not found" });
             } else {
-                // if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
-                if (email + "_key" === key || key === "abracadabra") {
+                if (crypto.createHash('sha256').update(user.username + user.email + "secretkey").digest('base64') === key || key === "abracadabra") {
+                // if (email + "_key" === key || key === "abracadabra") {
                     User.update({ email }, { disable: false }, (err, user) => {
                         // user.disabled = false;
                         // user.save((err, user) => {
@@ -382,16 +378,6 @@ app.post('/additem', (req, res) => {
             }
             else {
                 let uniqueID = uuidv4();//.substring(0, 8);
-                let message = {
-                    id: uniqueID,
-                    username: decoded.username,
-                    content: content,
-                    timestamp: Date.now(),
-                    childType,
-                    parent,
-                    media,
-                }
-
                 User.findOne({ username: decoded.username }, (err, user) => {
                     if (err || !user) {
                         //   console.log("unable to find user in db " + cookie + " /additem");
@@ -434,7 +420,10 @@ app.post('/additem', (req, res) => {
                                     if (media && media.length > 0) {
                                         hasMedia = true;
                                     }
+
+                                    // preemptively send 200 OK request, then queue write with RabbitMQ
                                     res.status(200).json({ status: "OK", id: uniqueID });
+                                    
 
                                     const message = {
                                         id: uniqueID,
@@ -756,6 +745,8 @@ app.post('/search', (req, res) => {
                         //     query.terms.username.push(followee);
                         // });
                         // console.log(JSON.stringify(query));
+
+                        // lookup tweet in elasticsearch
                         esClient.search({
                             index: 'tweets',
                             type: 'tweet',
@@ -1211,5 +1202,5 @@ app.get('/home', (req, res) => {
 });
 
 app.listen(port, () => {
-    //F console.log('Server started on port ' + port);
+    console.log('Server started on port ' + port);
 });
